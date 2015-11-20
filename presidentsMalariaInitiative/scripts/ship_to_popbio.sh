@@ -2,8 +2,11 @@
 # Ships all the local isatab sheets to the popbio locale, ready for CHADO-loading....
 #
 
-source_dir=/home/ab108/0VB/isatab/presidentsMalariaInitiative/data/isatab
-target_dir=/home/ab108/popbio/data_andy/isatabs/andy_2015-09-15_PMI
+scriptdir=`dirname $0`
+
+source_dir=$scriptdir/../data/isatab
+echo Enter full path of final target directory for isa-tab
+read target_dir
 
 # Check if target directory exists
 if [ -d $target_dir ]; then
@@ -17,7 +20,7 @@ fi
 
 echo -e "\tConverting sheets that are encoded in 'ISO-8859-1' into 'UTF-8'..."
 
-cd $source_dir
+pushd $source_dir
 
 echo -e "\t\ta_collection.txt"
 
@@ -50,6 +53,8 @@ iconv -f ISO-8859-1 -t UTF-8 p_IR_WHO.txt > p_IR_WHO_utf8.txt
 mv p_IR_WHO_utf8.txt p_IR_WHO.txt
 
 # Ship files over to popbio ready for loading
+
+popd
 
 echo -e "\tShipping files over to popbio..."
 

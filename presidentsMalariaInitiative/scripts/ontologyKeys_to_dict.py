@@ -92,7 +92,7 @@ for row in country_rows:
 # speciesTested to: miroTerm, miroId
 #
 reader      = csv.reader(open("../data/ontologies/speciesTested_to_miro.txt","rb"),delimiter="\t")
-print "\t/home/ab108/0VB/isatab/presidentsMalariaInitiative/data/ontologies/data/ontologies/speciesTested_to_miro.txt"
+print "\t../data/ontologies/speciesTested_to_miro.txt"
 species_rows= list(reader)
 species_to_miroTerm_miroId = {}
 
@@ -108,7 +108,7 @@ for row in species_rows:
 # insecticide tested to: miroTerms, concentrations, etc. 
 #
 reader  = csv.reader(open("../data/ontologies/insecticide_to_ontoTerms.txt","rb"),delimiter="\t")
-print "\t/home/ab108/0VB/isatab/presidentsMalariaInitiative/data/ontologies/data/ontologies/insecticide_to_ontoTerms.txt"
+print "\t../data/ontologies/data/ontologies/insecticide_to_ontoTerms.txt"
 insecticide_rows = list(reader)  # e.g. Malathion 5.0%  malathion   MIRO    10000065    5   percent UO  0000187
 insecticide_to_ontoTerms = {}  # e.g. country_to_gazTerm_gazId
 for row in insecticide_rows:
@@ -127,7 +127,7 @@ for row in insecticide_rows:
 # startMonth_to_numberMonth
 #
 reader  = csv.reader(open("../data/ontologies/startMonth_to_numberMonth.txt","rb"),delimiter="\t")
-print "\t/home/ab108/0VB/isatab/presidentsMalariaInitiative/data/ontologies/data/ontologies/startMonth_to_numberMonth.txt"
+print "\t../data/ontologies/data/ontologies/startMonth_to_numberMonth.txt"
 startMonth_rows = list(reader)  # e.g. species
 startMonth_to_numMonth = {}  # e.g. country_to_gazTerm_gazId
 
@@ -141,7 +141,7 @@ for row in startMonth_rows:
 # endMonth_to_numberMonth
 #
 reader  = csv.reader(open("../data/ontologies/endMonth_to_numberMonth.txt","rb"),delimiter="\t")
-print "\t/home/ab108/0VB/isatab/presidentsMalariaInitiative/data/ontologies/data/ontologies/endMonth_to_numberMonth.txt"
+print "\t../data/ontologies/data/ontologies/endMonth_to_numberMonth.txt"
 endMonth_rows = list(reader)  # e.g. species
 endMonth_to_numMonth = {}  # e.g. country_to_gazTerm_gazId
 
@@ -154,7 +154,7 @@ for row in endMonth_rows:
 # year range to yearStart, yearEnd
 #
 reader  = csv.reader(open("../data/ontologies/yearStartEnd_to_numStartEnd.txt","rb"),delimiter="\t")
-print "\t/home/ab108/0VB/isatab/presidentsMalariaInitiative/data/ontologies/data/ontologies/yearStartEnd_to_numStartEnd.txt"
+print "\t../data/ontologies/data/ontologies/yearStartEnd_to_numStartEnd.txt"
 yearStartToEnd_rows = list(reader)  # e.g. species
 yearStartToEnd_yearStart_yearEnd = {}  # e.g. country_to_gazTerm_gazId
 for row in yearStartToEnd_rows:
@@ -167,7 +167,7 @@ for row in yearStartToEnd_rows:
 # Stage tested 
 #
 reader  = csv.reader(open("../data/ontologies/stageTested_to_ontoTermsAdult.txt","rb"),delimiter="\t")
-print "\t/home/ab108/0VB/isatab/presidentsMalariaInitiative/data/ontologies/data/ontologies/stageTested_to_ontoTermsAdult.txt"
+print "\t../data/ontologies/data/ontologies/stageTested_to_ontoTermsAdult.txt"
 stageTested_rows = list(reader)  # e.g. species
 stageTested_ontoTermAdult_termSourceRef_accnNum = {}  # e.g. country_to_gazTerm_gazId
 for row in stageTested_rows:
