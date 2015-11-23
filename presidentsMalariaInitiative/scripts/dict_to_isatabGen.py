@@ -269,10 +269,10 @@ col_comment                 = np.array([""]*nrows)
 col_material_type           = np.array(["pool"]*nrows)  # according to ISA-Tab:fonseca:kathrin: ISA-Tab: https://docs.google.com/spreadsheets/d/16_UQVMct4b6p3KmQe2-jftBnCgrvLTS25XwxaVvn5Qw/edit#gid=1341677884
 
 # 5. header: "Term Source Ref"
-col_term_source_ref         = np.array(["OBI"]*nrows)
+col_term_source_ref         = np.array(["EFO"]*nrows)
 
 # 6. header: "Term Accession Number"
-col_term_accession_number   = np.array(["0000181"]*nrows)
+col_term_accession_number   = np.array(["0000663"]*nrows)
 
 # 10. header: "Comment [age]"
 #col_age                     = np.array([""]*nrows)
@@ -443,7 +443,11 @@ col_collection_performer              = np.array([""]*nrows)
 ### e.g.: "2006-05/2006-11"
 col_collection_date                   = np.array([" "]*nrows)
 months_start                          = header_to_datacolumn['Start month']['raw_dataset_column']  # @raw-dataset @main @dataset
-months_end                            = header_to_datacolumn['End month']['raw_dataset_column']
+months_end                            = header_to_datacolumn['End month']['raw_dataset_column'] 
+# sometimes the end month is missing, assume it's a single month collection so end==start
+for i,end_month in enumerate(months_end):
+    if end_month == "NR":
+        months_end[i] = months_start[i]
 
 # obtain two columns: year_start, year_end from one column "year": [ (x), (y,y), ... ] --> [ (x,x), (y,y), ... ]
 years_start = []  # e.g. ...
@@ -681,8 +685,8 @@ a_collection_headers = [    "Sample Name",\
                             "Characteristics [Collection site district (VBcv:0000699)]",\
                             "Characteristics [Collection site province (VBcv:0000700)]",\
                             "Characteristics [Collection site country (VBcv:0000701)]",\
-                            'Comment[Country code',\
-                            'Comment[Country',\
+                            'Comment[Country code]',\
+                            'Comment[Country]',\
                             'Comment[Year]',\
                             'Comment[Start month]',\
                             'Comment[End month]',\
@@ -727,8 +731,8 @@ a_collection = np.vstack((  col_collection_sample_names,\
                             col_collection_district,\
                             col_collection_provinces,\
                             col_collection_country,\
-                            col_collection_comment_Country,\
                             col_collection_comment_CountryCode,\
+                            col_collection_comment_Country,\
                             col_collection_comment_Year,\
                             col_collection_comment_Startmonth,\
                             col_collection_comment_Endmonth,\
@@ -1005,7 +1009,6 @@ a_IR_WHO_headers = np.array([   'Sample Name',\
                                 'Unit',\
                                 'Term Source Ref',\
                                 'Term Accession Number',\
-                                'Raw Data File',\
                                 'Comment[Test                                           type]',\
                                 'Comment[Insecticide tested]',\
                                 'Comment[Time at which mortality recorded]',\
@@ -1018,7 +1021,8 @@ a_IR_WHO_headers = np.array([   'Sample Name',\
                                 'Comment[Chemical class, if standard dosage]',\
                                 'Comment[UPDATED STATUS]',\
                                 'Comment[Resistance status_IRMapper]',\
-                                'Comment[Resistance code_IR Mapper]'])
+                                'Comment[Resistance code_IR Mapper]',\
+                                'Raw Data File'])
 
 a_IR_WHO = np.array([   col_IR_WHO_sample_names,\
                         col_IR_WHO_assay_names_final,\
@@ -1037,7 +1041,6 @@ a_IR_WHO = np.array([   col_IR_WHO_sample_names,\
                         col_IR_WHO_durationOfExposure_unit,\
                         col_IR_WHO_durationOfExposure_termSourceRef,\
                         col_IR_WHO_durationOfExposure_accn,\
-                        col_IR_WHO_rawDataFile,\
                         col_IR_WHO_comment_TestType,\
                         col_IR_WHO_comment_InsecticideTested,\
                         col_IR_WHO_Timeatwhichmortalityrecorded,\
@@ -1050,7 +1053,8 @@ a_IR_WHO = np.array([   col_IR_WHO_sample_names,\
                         col_IR_WHO_ChemicalclassCommAifstandarddosage,\
                         col_IR_WHO_UPDATEDSTATUS,\
                         col_IR_WHO_Resistancestatus_IRMapper,\
-                        col_IR_WHO_Resistancecode_IRMapper])
+                        col_IR_WHO_Resistancecode_IRMapper,\
+                        col_IR_WHO_rawDataFile])
 
 
 ### rows are flipped to columns
@@ -1264,7 +1268,6 @@ a_IR_BA_headers = np.array([    'Sample Name',\
                                 'Unit',\
                                 'Term Source Ref',\
                                 'Term Accession Number',\
-                                'Raw Data File',\
                                 'Comment[Test                                           type]',\
                                 'Comment[Insecticide tested]',\
                                 'Comment[Time at which mortality recorded]',\
@@ -1277,7 +1280,8 @@ a_IR_BA_headers = np.array([    'Sample Name',\
                                 'Comment[Chemical class, if standard dosage]',\
                                 'Comment[UPDATED STATUS]',\
                                 'Comment[Resistance status_IRMapper]',\
-                                'Comment[Resistance code_IR Mapper]' ])
+                                'Comment[Resistance code_IR Mapper]',\
+                                'Raw Data File'])
 
 a_IR_BA = np.array([    col_IR_BA_sample_names,\
                         col_IR_BA_assay_names_final,\
@@ -1296,7 +1300,6 @@ a_IR_BA = np.array([    col_IR_BA_sample_names,\
                         col_IR_BA_durationOfExposure_unit,\
                         col_IR_BA_durationOfExposure_termSourceRef,\
                         col_IR_BA_durationOfExposure_accn,\
-                        col_IR_BA_rawDataFile,\
                         col_IR_BA_comment_TestType,\
                         col_IR_BA_comment_InsecticideTested,\
                         col_IR_BA_Timeatwhichmortalityrecorded,\
@@ -1309,7 +1312,8 @@ a_IR_BA = np.array([    col_IR_BA_sample_names,\
                         col_IR_BA_ChemicalclassCommAifstandarddosage,\
                         col_IR_BA_UPDATEDSTATUS,\
                         col_IR_BA_Resistancestatus_IRMapper,\
-                        col_IR_BA_Resistancecode_IRMapper])
+                        col_IR_BA_Resistancecode_IRMapper,\
+                        col_IR_BA_rawDataFile])
 
 # rows are flipped to columns
 a_IR_BA             = a_IR_BA.T
