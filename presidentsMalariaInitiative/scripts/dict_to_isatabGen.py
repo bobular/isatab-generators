@@ -67,9 +67,20 @@ def filter_assay_rows( assay_data_rowise, assay_string_match ):
     Returns:
         similar to assay_data_rowise, but with rows only matching to those relevant to the assay specified in assay_string_match
 
+
+    WARNING: current implementation assumes a global variable header_to_datacolumn, which should contain the same number
+    of rows of data as the argument assay_data_rowise
+
     """
+
     # get all row pertaining to IR_WHO assays
     assay_specification_column = header_to_datacolumn["Test                                           type"]["raw_dataset_column"]
+
+    # check that the arg and the main global data are the same length
+    arg_shape = assay_data_rowise.shape
+    global_shape = assay_specification_column.shape
+    if arg_shape[0] != global_shape[0]:
+        raise NameError("unequal data dimensions in filter_assay_rows")
 
     # get indices of rows of data not relevant to IR_WHO assays
     row_indices_matching_specified_assay    = [i for i,row in enumerate(assay_specification_column) if not row==assay_string_match]
@@ -1109,6 +1120,13 @@ for i,mortality in enumerate(mortalityPercentages):
 
     mortalityPercentages_no_unit.append(mortality_noUnit)
 
+# process allele frequencies (remove percent - leave the NRs for now)
+allele_frequencies = header_to_datacolumn['Allelic frequency                   (%)']["raw_dataset_column"]
+allele_frequencies_nounit = []
+for i,frequency in enumerate(allele_frequencies):
+    frequency_nounit = frequency.replace("%","")
+    allele_frequencies_nounit.append(frequency_nounit)
+
 # @DONE: see if the Assay name and Phenotype name columns look as they should vs. fonseca
 
 # Observable
@@ -1400,6 +1418,96 @@ p_IR_BA[p_IR_BA=="NR"]=""
 
 # @save:a_IR_BA
 np.savetxt("../data/isatab/p_IR_BA.txt",      p_IR_BA,      delimiter="\t", fmt="%s")
+
+
+##################
+# a_KDR_genotype #
+##################
+
+print "\t\ta_KDR_genotyping.txt"
+
+col_KDR_sample_names = col_IR_WHO_sample_names
+col_KDR_assay_names  = np.array(["PMI.KDR."+i for i in col_KDR_sample_names])
+
+col_KDR_protocolRef = np.array(["KDR"]*nrows)
+col_KDR_comment_TestType = copy(col_IR_WHO_comment_TestType)
+col_KDR_rawDataFile = np.array(["g_KDR_genotypes.txt"]*nrows)
+
+a_KDR_headers = np.array([ 'Sample Name',\
+                           'Assay Name',\
+                           'Protocol REF',\
+                           'Comment[Test                                           type]',\
+                           'Raw Data File'])
+
+a_KDR_genotyping = np.array([ col_KDR_sample_names,\
+                              col_KDR_assay_names,\
+                              col_KDR_protocolRef,\
+                              col_KDR_comment_TestType,\
+                              col_KDR_rawDataFile ])
+
+
+# rows are flipped to columns
+a_KDR_genotyping             = a_KDR_genotyping.T
+
+# filter out non KDR_genotyping rows 
+a_KDR_genotyping_filtered    = filter_assay_rows( a_KDR_genotyping, "kdr (mutation unspecified)" )
+
+# stack the column headers on top
+a_KDR_genotyping             = np.vstack((a_KDR_headers,a_KDR_genotyping_filtered))
+
+### prune out all "NR" (not recorded) values as empty strings ""
+a_KDR_genotyping[a_KDR_genotyping=="NR"]=""
+
+# @save:a_KDR_genotyping
+np.savetxt("../data/isatab/a_KDR_genotyping.txt",      a_KDR_genotyping,      delimiter="\t", fmt="%s")
+
+
+#######################
+# g_KDR_genotypes.txt #
+#######################
+
+print "\t\tg_KDR_genotypes.txt"
+
+g_KDR_headers = np.array([ 'Assay Name',\
+                               'Genotype Name',\
+                               'Description',\
+                               'Type',\
+                               'Term Source REF',\
+                               'Term Accession Number',\
+                               'Characteristics [variant frequency (SO:0001763)]',\
+                               'Unit',\
+                               'Term Source REF',\
+                               'Term Accession Number'])
+
+
+col_KDR_genotype_names = np.array([ "unspecified kdr mutation frequency: "+i for i in allele_frequencies ])
+
+g_KDR_genotypes = np.array([ col_KDR_assay_names,\
+                                 col_KDR_genotype_names,\
+                                 np.array(["Alternate allele frequency"]*nrows),\
+                                 np.array(["modified sodium channel"]*nrows),\
+                                 np.array(["MIRO"]*nrows),\
+                                 np.array(["00000113"]*nrows),\
+                                 copy(allele_frequencies_nounit),\
+                                 np.array(["percent"]*nrows),\
+                                 np.array(["UO"]*nrows),\
+                                 np.array(["0000187"]*nrows) ])
+
+# rows are flipped to columns
+g_KDR_genotypes             = g_KDR_genotypes.T
+
+# filter out non KDR_genotyping rows 
+g_KDR_genotypes_filtered    = filter_assay_rows( g_KDR_genotypes, "kdr (mutation unspecified)" )
+
+# stack the column headers on top
+g_KDR_genotypes             = np.vstack((g_KDR_headers,g_KDR_genotypes_filtered))
+
+# DEAL WITH NRs
+### prune out all "NR" (not recorded) values as empty strings ""
+g_KDR_genotypes[g_KDR_genotypes=="NR"]=""
+
+# @save:a_KDR_genotyping
+np.savetxt("../data/isatab/g_KDR_genotypes.txt", g_KDR_genotypes,      delimiter="\t", fmt="%s")
 
 ############################################################################
 

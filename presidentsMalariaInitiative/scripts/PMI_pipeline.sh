@@ -7,6 +7,9 @@
 #
 
 
+# make it die at first error
+set -e
+
 scriptdir=`dirname $0`
 
 cd $scriptdir
