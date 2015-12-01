@@ -1480,11 +1480,12 @@ g_KDR_headers = np.array([ 'Assay Name',\
                                'Term Accession Number'])
 
 
-col_KDR_genotype_names = np.array([ "unspecified kdr mutation frequency: "+i for i in allele_frequencies ])
+col_KDR_genotype_names = np.array([ "kdr "+i for i in allele_frequencies ])
+col_KDR_descriptions = np.array([ "Unspecified kdr/para gene mutation frequency: "+i for i in allele_frequencies ])
 
 g_KDR_genotypes = np.array([ col_KDR_assay_names,\
                                  col_KDR_genotype_names,\
-                                 np.array(["Alternate allele frequency"]*nrows),\
+                                 col_KDR_descriptions,\
                                  np.array(["modified sodium channel"]*nrows),\
                                  np.array(["MIRO"]*nrows),\
                                  np.array(["00000113"]*nrows),\
