@@ -32,6 +32,8 @@ use feature "switch";
 use Text::CSV::Hashify;
 use Getopt::Long;
 use Scalar::Util qw(looks_like_number);
+use DateTime::Format::Strptime;
+
 
 my %parser_defaults = (binary => 1, eol => $/, sep_char => "\t");
 my $outdir = 'temp-isa-tab';
@@ -98,9 +100,16 @@ my @s_samples = ( ['Source Name', 'Sample Name', 'Description', 'Material Type',
 
 my @a_species = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Date', 'Characteristics [species assay result (VBcv:0000961)]', 'Term Source Ref', 'Term Accession Number' ] );
 
+my @a_collection = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Date', 'Comment [Household ID]', 'Comment [Hse]', 'Comment [Room]', 'Comment [Trap ID]', 'Comment [Trap location]', 'Characteristics [building roof (ENVO:01000472)]', 'Term Source Ref', 'Term Accession Number', 'Comment [House eave]', 'Comment [Fire burn last night]', 'Comment [number ITN]', 'Comment [number people sleeping]', 'Comment [number people sleeping under ITN]', 'Comment [data comment]', 'Characteristics [Collection site (VBcv:0000831)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [Collection site latitude (VBcv:0000817)]', 'Characteristics [Collection site longitude (VBcv:0000816)]', 'Characteristics [Collection site altitude (VBcv:0000832)]', 'Characteristics [Collection site location (VBcv:0000698)]', 'Characteristics [Collection site village (VBcv:0000829)]', 'Characteristics [Collection site locality (VBcv:0000697)]', 'Characteristics [Collection site suburb (VBcv:0000845)]', 'Characteristics [Collection site city (VBcv:0000844)]', 'Characteristics [Collection site county (VBcv:0000828)]', 'Characteristics [Collection site district (VBcv:0000699)]', 'Characteristics [Collection site province (VBcv:0000700)]', 'Characteristics [Collection site country (VBcv:0000701)]' ] );
+
 # actual data rows for Anopheline individuals
 foreach my $id (keys %{$anophelines}) {
   my $anopheline = $anophelines->{$id};
+  my $hh_date = $anopheline->{'HH ID'}.':'.$anopheline->{'Collection Date'};
+  unless ($households->{$hh_date}) {
+    warn "skipping sample $id because no household/collection data for hh:date >$hh_date<\n";
+    next;
+  }
   push @s_samples,
     ['Norris ICEMR',
      $id,
@@ -121,10 +130,15 @@ foreach my $id (keys %{$anophelines}) {
      $id, $id.'.species.pcr', '', 'SPECIES_PCR', '',
      pcr_species_term($anopheline->{'PCR species'}),
     ];
+  push @a_collection, collection_row($id, $households->{$hh_date});
 }
 
 # now process the counts sheet to add culicines
 foreach my $hh_date (keys %{$counts}) {
+  unless ($households->{$hh_date}) {
+    warn "skipping counts row for hh:date >$hh_date< because no household/collection data\n";
+    next;
+  }
   my $count = $counts->{$hh_date};
   if (looks_like_number($count->{'#fem Culicines'})) {
     for (my $i=0; $i<$count->{'#fem Culicines'}; $i++) {
@@ -146,7 +160,7 @@ foreach my $hh_date (keys %{$counts}) {
 	 morpho_species_term('Culicine'),
 	];
 
-      ## SHOULD ADD SPECIES AND COLLECTIONS AT THIS POINT TOO
+      push @a_collection, collection_row($id, $households->{$hh_date});
     }
   }
   if (looks_like_number($count->{'#male Culicines'})) {
@@ -169,7 +183,7 @@ foreach my $hh_date (keys %{$counts}) {
 	 morpho_species_term('Culicine'),
 	];
 
-      ## SHOULD ADD SPECIES AND COLLECTIONS AT THIS POINT TOO
+      push @a_collection, collection_row($id, $households->{$hh_date});
     }
   }
 }
@@ -178,6 +192,7 @@ foreach my $hh_date (keys %{$counts}) {
 
 write_table("$outdir/s_samples.txt", \@s_samples);
 write_table("$outdir/a_species.txt", \@a_species);
+write_table("$outdir/a_collection.txt", \@a_collection);
 
 
 #
@@ -254,6 +269,71 @@ sub pcr_species_term {
   }
 }
 
+#
+# makes the row of data for a_collections, given the sample id (first arg) and the relevant hashref 'row' from the households hash (second arg)
+#
+# Here are the columns again, as a reminder
+# Sample Name
+# Assay Name
+# Description
+# Protocol REF
+# Date
+# Comment [household ID]
+# Comment [Hse]
+# Comment [Room]
+# Comment [Trap ID]
+# Comment [Trap location]
+# Characteristics [building roof (ENVO:01000472)]
+# Term Source Ref
+# Term Accession Number
+# Comment [House eave]
+# Comment [Fire burn last night]
+# Comment [number ITN]
+# Comment [number people sleeping]
+# Comment [number people sleeping under ITN]
+# Comment [data comment]
+# Characteristics [Collection site (VBcv:0000831)]
+# Term Source Ref
+# Term Accession Number
+# Characteristics [Collection site latitude (VBcv:0000817)]
+# Characteristics [Collection site longitude (VBcv:0000816)]
+# Characteristics [Collection site altitude (VBcv:0000832)]
+# Characteristics [Collection site location (VBcv:0000698)]
+# Characteristics [Collection site village (VBcv:0000829)]
+# Characteristics [Collection site locality (VBcv:0000697)]
+# Characteristics [Collection site suburb (VBcv:0000845)]
+# Characteristics [Collection site city (VBcv:0000844)]
+# Characteristics [Collection site county (VBcv:0000828)]
+# Characteristics [Collection site district (VBcv:0000699)]
+# Characteristics [Collection site province (VBcv:0000700)]
+# Characteristics [Collection site country (VBcv:0000701)]
+
+sub collection_row {
+  my ($sample_id, $data) = @_;
+  use DateTime::Format::Strptime;
+
+  my $date_parser = DateTime::Format::Strptime->new(
+						    pattern   => '%d-%b-%y',
+						    locale    => 'en_US',
+						    time_zone => 'Europe/London'
+						   );
+  my $dt = $date_parser->parse_datetime($data->{Date});
+
+  my $iso_ish_date = sprintf "%d-%02d-%02d", $dt->year, $dt->month, $dt->day;
+
+  return [
+	  $sample_id,
+	  'collection.'.$data->{Date}.'.'.$data->{'HH ID'},
+	  '',
+	  $data->{'Coll Method'},
+	  $iso_ish_date,
+	  $data->{'HH ID'},
+	  $data->{'Hse'},
+	  $data->{'Room'},
+	  $data->{'Trap ID'},
+	  $data->{'Trap Location'},
+	 ];
+}
 
 
 
