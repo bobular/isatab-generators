@@ -1,35 +1,80 @@
 #!/usr/bin/env perl
+#  -*- mode: CPerl -*-
+
+#
+# usage ./generate-isa-tab.pl [ -outdir dirname ]
+#
+# everything is hardcoded on purpose!
+# currently expects files to be in mock-data directory (will prob add an option)
+#
+# edit investigation sheet manually in Google Spreadsheets and download as TSV
+# into the output directory before loading into Chado
+#
+
+#
+# Notes, Issues, and TO DOs
+#
+# 'Missing Cx data' in Counts sheet is not handled correctly - it is treated the same as zero
+# mosquito counts.  Possible solution is to add a comment to the relevant collection record?
+#
+# Morpho species ID: An. funestus -> An. funestus s.l.
+# PCR species ID:    An. funestus -> An. funestus s.s.  THIS NEEDS CONFIRMATION from authors.
+#
+#
+#
+#
+
 
 use strict;
 use warnings;
+use feature "switch";
 
 use Text::CSV::Hashify;
-
+use Getopt::Long;
+use Scalar::Util qw(looks_like_number);
 
 my %parser_defaults = (binary => 1, eol => $/, sep_char => "\t");
+my $outdir = 'temp-isa-tab';
+my $culicine_id_format = 'IcNc13-C%04d';
+my $culicine_id_start = 1;
 
-# get arrays of hashes of the input data
+GetOptions("outdir=s"=>\$outdir);
 
-# Counts.txt
+mkdir $outdir unless (-e $outdir);
+die "can't make output directory: $outdir\n" unless (-d $outdir);
+
+
+
+#
+# INPUT TABULAR DATA
+#
+# into hashes of hashes, e.g.
+#
+# $table->{$row_id}{$col_name}
+#
+
+## Counts.txt
 # not sure yet which columns are unique, so can't use hash of hashes
 my $counts_aoh = Text::CSV::Hashify->new( {
 					   file   => 'mock-data/Counts.txt',
 					   format => 'aoh',
 					   %parser_defaults,
 					  } );
-
 # make a hash of hashes using Household ID:Collection date
 my $counts = hashify_by_multiple_keys($counts_aoh->all, ':', 'HH ID', 'Date');
 
-# Anophelines.txt
+
+## Anophelines.txt
 # can use unique IDs in first column
-my $anophelines = Text::CSV::Hashify->new( {
+my $anophelines_hoh = Text::CSV::Hashify->new( {
 					    file   => 'mock-data/Anophelines.txt',
 					    format => 'hoh',
 					    key => 'ID',
 					    %parser_defaults,
 					   } );
-# Household data.txt
+my $anophelines = $anophelines_hoh->all;
+
+## Household data.txt
 my $hh_aoh = Text::CSV::Hashify->new( {
 				       file   => 'mock-data/Household data.txt',
 				       format => 'aoh',
@@ -39,12 +84,175 @@ my $households = hashify_by_multiple_keys($hh_aoh->all, ':', 'HH ID', 'Date');
 
 
 
-foreach my $hh_date (keys %$households) {
-  printf "got a household %s with trap ID %s - count trap ID %s\n", $hh_date, $households->{$hh_date}{'Trap ID'}, $counts->{$hh_date}{'Trap ID'};
+
+#
+# SAMPLES, SPECIES and COLLECTIONS
+#
+
+# each row in the Anophelines table has its own ID, and is an individual mosquito
+
+my $culicine_id_num = $culicine_id_start;
+
+# headers
+my @s_samples = ( ['Source Name', 'Sample Name', 'Description', 'Material Type', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sex (EFO:0000695)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [developmental stage (EFO:0000399)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [combined feeding and gonotrophic status of insect (VSMO:0002038)]', 'Term Source Ref', 'Term Accession Number'] );
+
+my @a_species = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Date', 'Characteristics [species assay result (VBcv:0000961)]', 'Term Source Ref', 'Term Accession Number' ] );
+
+# actual data rows for Anopheline individuals
+foreach my $id (keys %{$anophelines}) {
+  my $anopheline = $anophelines->{$id};
+  push @s_samples,
+    ['Norris ICEMR',
+     $id,
+     'Anopheline',
+     qw/individual EFO 0000542/,
+     sex_term($anopheline->{Sex}),
+     qw/adult IDOMAL 0000655/,
+     # males can't have a blood feeding status
+     ( $anopheline->{Sex} eq 'M' ? ('','','') : feeding_status_term($anopheline->{Blooded}) ),
+    ];
+  push @a_species,
+    [
+     $id, $id.'.species.morpho', '', 'SPECIES_MORPHO', '',
+     morpho_species_term($anopheline->{'Morph species'}),
+    ];
+  push @a_species,
+    [
+     $id, $id.'.species.pcr', '', 'SPECIES_PCR', '',
+     pcr_species_term($anopheline->{'PCR species'}),
+    ];
+}
+
+# now process the counts sheet to add culicines
+foreach my $hh_date (keys %{$counts}) {
+  my $count = $counts->{$hh_date};
+  if (looks_like_number($count->{'#fem Culicines'})) {
+    for (my $i=0; $i<$count->{'#fem Culicines'}; $i++) {
+      my $id = sprintf $culicine_id_format, $culicine_id_num++;
+      push @s_samples,
+	[
+	 'Norris ICEMR',
+	 $id,
+	 'Culicine',
+	 qw/individual EFO 0000542/,
+	 sex_term('F'),
+	 qw/adult IDOMAL 0000655/,
+	 ('','','')
+	];
+
+      push @a_species,
+	[
+	 $id, $id.'.species.morpho', '', 'SPECIES_MORPHO', '',
+	 morpho_species_term('Culicine'),
+	];
+
+      ## SHOULD ADD SPECIES AND COLLECTIONS AT THIS POINT TOO
+    }
+  }
+  if (looks_like_number($count->{'#male Culicines'})) {
+    for (my $i=0; $i<$count->{'#male Culicines'}; $i++) {
+      my $id = sprintf $culicine_id_format, $culicine_id_num++;
+      push @s_samples,
+	[
+	 'Norris ICEMR',
+	 $id,
+	 'Culicine',
+	 qw/individual EFO 0000542/,
+	 sex_term('M'),
+	 qw/adult IDOMAL 0000655/,
+	 ('','','')
+	];
+
+      push @a_species,
+	[
+	 $id, $id.'.species.morpho', '', 'SPECIES_MORPHO', '',
+	 morpho_species_term('Culicine'),
+	];
+
+      ## SHOULD ADD SPECIES AND COLLECTIONS AT THIS POINT TOO
+    }
+  }
 }
 
 
 
+write_table("$outdir/s_samples.txt", \@s_samples);
+write_table("$outdir/a_species.txt", \@a_species);
+
+
+#
+# LOOKUP SUBS
+#
+# return lists, often (term_name, ontology, accession number)
+#
+#
+
+sub sex_term {
+  my $input = shift;
+  given ($input) {
+    when (/^F$/) {
+      return ('female', 'PATO', '0000383');
+    }
+    when (/^M$/) {
+      return ('male', 'PATO', '0000384');
+    }
+    default {
+      die "fatal error: unknown sex_term >$input<\n";
+    }
+  }
+}
+
+sub feeding_status_term {
+  my $input = shift;
+  given ($input) {
+    when (/^N$/) {
+      return ('unfed female insect', 'VSMO', '0000210')
+    }
+    when (/^Y$/) {
+      return ('fed female insect', 'VSMO', '0000218');
+    }
+    default {
+      die "fatal error: unknown feeding_status_term >$input<\n";
+    }
+  }
+}
+
+
+sub morpho_species_term {
+  my $input = shift;
+  given ($input) {
+    when (/^An\. funestus$/) {
+      return ('Anopheles funestus sensu lato', 'VBsp', '0003478')
+    }
+    when (/^An\. gambiae$/) {
+      return ('Anopheles gambiae sensu lato', 'VBsp', '0003480')
+    }
+    when (/^Culicine$/) {
+      return ('Culicini', 'VBsp', '0003820')
+    }
+    default {
+      die "fatal error: unknown morpho_species_term >$input<\n";
+    }
+  }
+}
+
+sub pcr_species_term {
+  my $input = shift;
+  given ($input) {
+    when (/^An\. funestus$/) {
+      return ('Anopheles funestus', 'VBsp', '0003834')
+    }
+    when (/^An\. leesoni$/) {
+      return ('Anopheles leesoni', 'VBsp', '0003509')
+    }
+    when (/^An\. gambiae s\.s\.$/) {
+      return ('Anopheles gambiae', 'VBsp', '0003829')
+    }
+    default {
+      die "fatal error: unknown pcr_species_term >$input<\n";
+    }
+  }
+}
 
 
 
@@ -68,6 +276,19 @@ sub hashify_by_multiple_keys {
     die "non-unique multiple key (@keys): >$newkey<\n" if exists $hashref->{$newkey};
     $hashref->{$newkey} = $row;
   }
-  
+
   return $hashref;
 }
+
+sub write_table {
+  my ($filename, $arrayref) = @_;
+  my $handle;
+  open($handle, ">", $filename) || die "problem opening $filename for writing\n";
+  my $tsv_writer = Text::CSV->new ( \%parser_defaults );
+  foreach my $row (@{$arrayref}) {
+    $tsv_writer->print($handle, $row);
+  }
+  close($handle);
+  warn "sucessfully wrote $filename\n";
+}
+
