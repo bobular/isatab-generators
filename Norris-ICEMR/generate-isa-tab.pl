@@ -20,9 +20,13 @@
 # Morpho species ID: An. funestus -> An. funestus s.l.
 # PCR species ID:    An. funestus -> An. funestus s.s.  THIS NEEDS CONFIRMATION from authors.
 #
+# metal roof = sheet-iron building roof ENVO:01000510 ?
 #
+# open/closed eaves potentially awaiting ENVO terms? see https://confluence.vectorbase.org/display/DB/New+ontology+terms
 #
+# UTM conversion is iffy, to say the least - awaiting author input
 #
+
 
 
 use strict;
@@ -33,7 +37,7 @@ use Text::CSV::Hashify;
 use Getopt::Long;
 use Scalar::Util qw(looks_like_number);
 use DateTime::Format::Strptime;
-
+use Geo::Coordinates::UTM;
 
 my %parser_defaults = (binary => 1, eol => $/, sep_char => "\t");
 my $outdir = 'temp-isa-tab';
@@ -100,7 +104,7 @@ my @s_samples = ( ['Source Name', 'Sample Name', 'Description', 'Material Type',
 
 my @a_species = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Date', 'Characteristics [species assay result (VBcv:0000961)]', 'Term Source Ref', 'Term Accession Number' ] );
 
-my @a_collection = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Date', 'Comment [Household ID]', 'Comment [Hse]', 'Comment [Room]', 'Comment [Trap ID]', 'Comment [Trap location]', 'Characteristics [building roof (ENVO:01000472)]', 'Term Source Ref', 'Term Accession Number', 'Comment [House eave]', 'Comment [Fire burn last night]', 'Comment [number ITN]', 'Comment [number people sleeping]', 'Comment [number people sleeping under ITN]', 'Comment [data comment]', 'Characteristics [Collection site (VBcv:0000831)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [Collection site latitude (VBcv:0000817)]', 'Characteristics [Collection site longitude (VBcv:0000816)]', 'Characteristics [Collection site altitude (VBcv:0000832)]', 'Characteristics [Collection site location (VBcv:0000698)]', 'Characteristics [Collection site village (VBcv:0000829)]', 'Characteristics [Collection site locality (VBcv:0000697)]', 'Characteristics [Collection site suburb (VBcv:0000845)]', 'Characteristics [Collection site city (VBcv:0000844)]', 'Characteristics [Collection site county (VBcv:0000828)]', 'Characteristics [Collection site district (VBcv:0000699)]', 'Characteristics [Collection site province (VBcv:0000700)]', 'Characteristics [Collection site country (VBcv:0000701)]' ] );
+my @a_collection = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Date', 'Comment [Household ID]', 'Comment [Hse]', 'Comment [Room]', 'Comment [Trap ID]', 'Comment [Trap location]', 'Characteristics [building roof (ENVO:01000472)]', 'Term Source Ref', 'Term Accession Number', 'Comment [House eave]', 'Comment [Fire burn last night]', 'Comment [number ITN]', 'Comment [number people sleeping]', 'Comment [number people sleeping under ITN]', 'Comment [data comment]', 'Characteristics [Collection site (VBcv:0000831)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [Collection site latitude (VBcv:0000817)]', 'Characteristics [Collection site longitude (VBcv:0000816)]', 'Characteristics [Collection site altitude (VBcv:0000832)]', 'Comment [UTM coordinates]' ] ); # 'Characteristics [Collection site location (VBcv:0000698)]', 'Characteristics [Collection site village (VBcv:0000829)]', 'Characteristics [Collection site locality (VBcv:0000697)]', 'Characteristics [Collection site suburb (VBcv:0000845)]', 'Characteristics [Collection site city (VBcv:0000844)]', 'Characteristics [Collection site county (VBcv:0000828)]', 'Characteristics [Collection site district (VBcv:0000699)]', 'Characteristics [Collection site province (VBcv:0000700)]', 'Characteristics [Collection site country (VBcv:0000701)]' ] );
 
 # actual data rows for Anopheline individuals
 foreach my $id (keys %{$anophelines}) {
@@ -233,6 +237,21 @@ sub feeding_status_term {
 }
 
 
+sub building_roof_term {
+  my $input = shift;
+  given ($input) {
+    when (/^metal$/) {
+      return ('sheet-iron building roof', 'ENVO', '01000510')
+    }
+    when (/^thatch$/) {
+      return ('thatched building roof', 'ENVO', '01000511');
+    }
+    default {
+      die "fatal error: unknown building_roof_term >$input<\n";
+    }
+  }
+}
+
 sub morpho_species_term {
   my $input = shift;
   given ($input) {
@@ -298,6 +317,7 @@ sub pcr_species_term {
 # Characteristics [Collection site latitude (VBcv:0000817)]
 # Characteristics [Collection site longitude (VBcv:0000816)]
 # Characteristics [Collection site altitude (VBcv:0000832)]
+### NOT USED YET
 # Characteristics [Collection site location (VBcv:0000698)]
 # Characteristics [Collection site village (VBcv:0000829)]
 # Characteristics [Collection site locality (VBcv:0000697)]
@@ -331,7 +351,18 @@ sub collection_row {
 	  $data->{'Hse'},
 	  $data->{'Room'},
 	  $data->{'Trap ID'},
-	  $data->{'Trap Location'},
+	  $data->{'Trap location'},
+	  building_roof_term($data->{'Roof Type'}),
+	  $data->{'House eave'},
+	  $data->{'Fire burn last night'},
+	  $data->{'# ITN'},
+	  $data->{'#p Slept '},
+	  $data->{'#p under ITN '},
+	  $data->{'data comments'},
+	  ('Zambia', 'GAZ', '00001107'),
+	  utm_to_latlon('WGS-84', uc(substr($data->{Grid}, 0, 3)), $data->{'UTM X'}, $data->{'UTM Y'}),
+	  '',
+	  join(' ', $data->{Grid}, $data->{'UTM X'}, $data->{'UTM Y'}),
 	 ];
 }
 
