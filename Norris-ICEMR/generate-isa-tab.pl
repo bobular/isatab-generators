@@ -26,8 +26,11 @@
 #
 # UTM conversion is iffy, to say the least - awaiting author input
 #
-
-
+# Blood PCR species ID - is 'no fragment' always from an actual assay? there are males with 'no fragment'
+# Blood PCR results not ontologised (do we want to import whole of NCBITaxon for other purposes (e.g. metagenomics)
+#
+# ELISA Postive typo allowed
+#
 
 use strict;
 use warnings;
@@ -106,6 +109,12 @@ my @a_species = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 
 
 my @a_collection = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Date', 'Comment [Household ID]', 'Comment [Hse]', 'Comment [Room]', 'Comment [Trap ID]', 'Comment [Trap location]', 'Characteristics [building roof (ENVO:01000472)]', 'Term Source Ref', 'Term Accession Number', 'Comment [House eave]', 'Comment [Fire burn last night]', 'Comment [number ITN]', 'Comment [number people sleeping]', 'Comment [number people sleeping under ITN]', 'Comment [data comment]', 'Characteristics [Collection site (VBcv:0000831)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [Collection site latitude (VBcv:0000817)]', 'Characteristics [Collection site longitude (VBcv:0000816)]', 'Characteristics [Collection site altitude (VBcv:0000832)]', 'Comment [UTM coordinates]' ] ); # 'Characteristics [Collection site location (VBcv:0000698)]', 'Characteristics [Collection site village (VBcv:0000829)]', 'Characteristics [Collection site locality (VBcv:0000697)]', 'Characteristics [Collection site suburb (VBcv:0000845)]', 'Characteristics [Collection site city (VBcv:0000844)]', 'Characteristics [Collection site county (VBcv:0000828)]', 'Characteristics [Collection site district (VBcv:0000699)]', 'Characteristics [Collection site province (VBcv:0000700)]', 'Characteristics [Collection site country (VBcv:0000701)]' ] );
 
+my @a_blood_species = ( [ 'Sample Name', 'Assay Name', 'Protocol REF', 'Comment [note]', 'Raw Data File' ] );
+my @p_blood_species = ( [ 'Assay Name', 'Phenotype Name', 'Observable', 'Term Source Ref', 'Term Accession Number', 'Attribute', 'Term Source Ref', 'Term Accession Number', 'Value', 'Term Source Ref', 'Term Accession Number', 'Unit', 'Term Source Ref', 'Term Accession Number' ] );
+
+my @a_elisa_pf = ( [ 'Sample Name', 'Assay Name', 'Protocol REF', 'Raw Data File' ] );
+my @p_elisa_pf = ( [ 'Assay Name', 'Phenotype Name', 'Observable', 'Term Source Ref', 'Term Accession Number', 'Attribute', 'Term Source Ref', 'Term Accession Number', 'Value', 'Term Source Ref', 'Term Accession Number', 'Unit', 'Term Source Ref', 'Term Accession Number' ] );
+
 # actual data rows for Anopheline individuals
 foreach my $id (keys %{$anophelines}) {
   my $anopheline = $anophelines->{$id};
@@ -135,6 +144,52 @@ foreach my $id (keys %{$anophelines}) {
      pcr_species_term($anopheline->{'PCR species'}),
     ];
   push @a_collection, collection_row($id, $households->{$hh_date});
+
+
+  # blood meal identification
+  my $blood_PCR = $anopheline->{'Blood PCR'};
+  if ($blood_PCR) {
+    my (@blood_values, $comment, $phenotype_name);
+    if ($blood_PCR eq 'no fragment') {
+      @blood_values = ('record of missing knowledge', 'OBI', '0000852');
+      $comment = 'no amplified fragment';
+      $phenotype_name = 'unidentified blood meal';
+    } else {
+      @blood_values = ($blood_PCR, '', '');
+      $comment = '';
+      $phenotype_name = "$blood_PCR blood meal";
+    }
+
+    my $assay_name = "$id.blood_PCR";
+    push @a_blood_species, [ $id, $assay_name, "BLOOD_PCR", $comment, 'p_blood_species.txt' ];
+    push @p_blood_species,
+      [
+       $assay_name, $phenotype_name,
+       'identification of source of blood meal in arthropod', 'VSMO', '0000174',
+       'organism', 'OBI', '0100026',
+       @blood_values,
+       '', '', '' # no units
+      ];
+  } # else no blood meal assay if this cell is empty
+
+  # plasmodium ELISA
+  my $ELISA_Pf = $anopheline->{'ELISA Pf'};
+  if ($ELISA_Pf) {
+    my $assay_name = "$id.Pf_ELISA";
+    push @a_elisa_pf, [ $id, $assay_name, "ELISA", 'p_elisa_pf.txt' ];
+    push @p_elisa_pf,
+      [
+       $assay_name,
+       "$ELISA_Pf Plasmodium falciparum ELISA test",
+       'arthropod infection status', 'VSMO', '0000009', 'test result', 'EFO', '0000720',
+       positive_negative_term($ELISA_Pf),
+       '', '', '' # no units
+      ];
+  } # else no assay if cell is empty
+
+
+
+
 }
 
 # now process the counts sheet to add culicines
@@ -197,6 +252,12 @@ foreach my $hh_date (keys %{$counts}) {
 write_table("$outdir/s_samples.txt", \@s_samples);
 write_table("$outdir/a_species.txt", \@a_species);
 write_table("$outdir/a_collection.txt", \@a_collection);
+
+write_table("$outdir/a_blood_species.txt", \@a_blood_species);
+write_table("$outdir/p_blood_species.txt", \@p_blood_species);
+
+write_table("$outdir/a_elisa_pf.txt", \@a_elisa_pf);
+write_table("$outdir/p_elisa_pf.txt", \@p_elisa_pf);
 
 
 #
@@ -288,6 +349,25 @@ sub pcr_species_term {
   }
 }
 
+
+
+sub positive_negative_term {
+  my $input = shift;
+  given ($input) {
+    when (/^Posi?tive$/) {
+      return ('present', 'PATO', '0000467');
+    }
+    when (/^Negative$/) {
+      return ('absent', 'PATO', '0000462');
+    }
+    default {
+      die "fatal error: unknown positive_negative_term >$input<\n";
+    }
+  }
+}
+
+
+
 #
 # makes the row of data for a_collections, given the sample id (first arg) and the relevant hashref 'row' from the households hash (second arg)
 #
@@ -317,6 +397,7 @@ sub pcr_species_term {
 # Characteristics [Collection site latitude (VBcv:0000817)]
 # Characteristics [Collection site longitude (VBcv:0000816)]
 # Characteristics [Collection site altitude (VBcv:0000832)]
+# Comment [UTM coordinates]
 ### NOT USED YET
 # Characteristics [Collection site location (VBcv:0000698)]
 # Characteristics [Collection site village (VBcv:0000829)]
