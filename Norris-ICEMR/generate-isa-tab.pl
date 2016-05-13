@@ -31,6 +31,12 @@
 #
 # ELISA Postive typo allowed
 #
+# ELISA phenotype has no formal mention of Plasmodium falciparum
+# either add as a protocol parameter or as a phenotype prop
+#
+# funestus/gambiae->Cellia http://vb-dev.bio.ic.ac.uk:3030/sample/?id=VBS0061578
+#
+#
 
 use strict;
 use warnings;
