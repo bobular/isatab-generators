@@ -447,7 +447,7 @@ sub collection_row {
 	  $data->{'#p under ITN '},
 	  $data->{'data comments'},
 	  ('Zambia', 'GAZ', '00001107'),
-	  utm_to_latlon('WGS-84', uc(substr($data->{Grid}, 0, 3)), $data->{'UTM X'}, $data->{'UTM Y'}),
+	  utm_to_latlon('WGS-84', '35C', $data->{'UTM X'}, $data->{'UTM Y'}),
 	  '',
 	  join(' ', $data->{Grid}, $data->{'UTM X'}, $data->{'UTM Y'}),
 	 ];
