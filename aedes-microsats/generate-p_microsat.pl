@@ -49,12 +49,25 @@ my $lines_aoh = Text::CSV::Hashify->new( {
 					  } )->all;
 
 
+# print the headers - separated by \t
+print "THIS WOULD BE A GOOD PLACE TO PRINT THE HEADERS\n";
+
+# this loop processes every line in the file
 foreach my $row_ref (@$lines_aoh) {
   my $sample_id = $row_ref->{"Sample ID"};
   if (defined $sample_id) {
+
+    # now do every allele
     foreach my $allele (@alleles) {
       my $length = $row_ref->{$allele};
-      print "I read in the line for $sample_id it as $length for $allele\n";
+
+      # get the AC1 part out of AC1:A
+      my ($locus, $a_or_b) = split /:/, $allele;
+
+      # printf prints a formatted 'template' string
+      # the variable values follow it
+      printf "Sample=%s\tLocus=%s\tAllele=%s\tLength=%d\n",
+	$sample_id, $locus, $allele, $length;
     }
   } else {
     print "problem reading row\n";
@@ -62,6 +75,10 @@ foreach my $row_ref (@$lines_aoh) {
 }
 
 
+#
+# the following unused function writes "proper" CSV/TSV but
+# we don't need it for this simple task
+#
 sub write_table {
   my ($filename, $arrayref) = @_;
   my $handle;
