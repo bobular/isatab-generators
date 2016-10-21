@@ -2,9 +2,10 @@
 #  -*- mode: CPerl -*-
 
 #
-# usage ./generate-p_microsat.pl [ -inputfile filename ] > p_microsat.txt
+# usage ./generate-a_microsat.pl [ -inputfile filename ] > a_microsat.txt
 #
-
+#
+#
 
 use strict;
 use warnings;
@@ -24,8 +25,9 @@ GetOptions(
 	   "inputfile=s"=>\$inputfile,
 	  );
 
-
-my @alleles = qw/AC1:A   AC1:B   AC2:A   AC2:B   AC4:A   AC4:B   AC5:A   AC5:B   CT2:A   CT2:B   AG1:A   AG1:B   AG2:A   AG2:B   AG5:A   AG5:B   A1:A    A1:B    A9:A    A9:B    B2:A    B2:B    B3:A    B3:B/;
+# edit the :A :B out of these and make unique
+# e.g. AC1 AC2 AC4 etc
+my @loci = qw/AC1:A   AC1:B   AC2:A   AC2:B   AC4:A   AC4:B   AC5:A   AC5:B   CT2:A   CT2:B   AG1:A   AG1:B   AG2:A   AG2:B   AG5:A   AG5:B   A1:A    A1:B    A9:A    A9:B    B2:A    B2:B    B3:A    B3:B/;
 
 
 
@@ -52,16 +54,13 @@ foreach my $row_ref (@$lines_aoh) {
   if (defined $sample_id) {
 
     # now do every allele
-    foreach my $allele (@alleles) {
-      my $length = $row_ref->{$allele};
-
-      # get the AC1 part out of AC1:A
-      my ($locus, $a_or_b) = split /:/, $allele;
+    foreach my $locus (@loci) {
 
       # printf prints a formatted 'template' string
       # the variable values follow it
-      printf "Sample=%s\tLocus=%s\tAllele=%s\tLength=%d\n",
-	$sample_id, $locus, $allele, $length;
+      printf "Sample=%s\tLocus=%s\n",
+	$sample_id, $locus;
+
     }
   } else {
     print "problem reading row\n";
