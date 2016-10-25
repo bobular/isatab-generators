@@ -27,7 +27,7 @@ GetOptions(
 
 # edit the :A :B out of these and make unique
 # e.g. AC1 AC2 AC4 etc
-my @loci = qw/AC1:A   AC1:B   AC2:A   AC2:B   AC4:A   AC4:B   AC5:A   AC5:B   CT2:A   CT2:B   AG1:A   AG1:B   AG2:A   AG2:B   AG5:A   AG5:B   A1:A    A1:B    A9:A    A9:B    B2:A    B2:B    B3:A    B3:B/;
+my @loci = qw/AC1 AC2 AC4 AC5 CT2 AG1 AG2 AG5 A1 A9 B2 B3/;
 
 
 
@@ -46,7 +46,7 @@ my $lines_aoh = Text::CSV::Hashify->new( {
 
 
 # print the headers - separated by \t
-print "THIS WOULD BE A GOOD PLACE TO PRINT THE HEADERS\n";
+print "Sample Name\t Assay Name\t Protocol REF\t Performer\t Date\t Comment[note]\t Raw Data File\n";
 
 # this loop processes every line in the file
 foreach my $row_ref (@$lines_aoh) {
@@ -57,9 +57,8 @@ foreach my $row_ref (@$lines_aoh) {
     foreach my $locus (@loci) {
 
       # printf prints a formatted 'template' string
-      # the variable values follow it
-      printf "Sample=%s\tLocus=%s\n",
-	$sample_id, $locus;
+      # the variable values follow
+      printf "%s\t%s.%s\t\MICRO_PCR\t\t\t\tg_microsat.txt\n", $sample_id, $sample_id, $locus
 
     }
   } else {
