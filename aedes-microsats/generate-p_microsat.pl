@@ -25,7 +25,7 @@ GetOptions(
 	  );
 
 
-my @alleles = qw/AC1:A   AC1:B   AC2:A   AC2:B   AC4:A   AC4:B   AC5:A   AC5:B   CT2:A   CT2:B   AG1:A   AG1:B   AG2:A   AG2:B   AG5:A   AG5:B   A1:A    A1:B    A9:A    A9:B    B2:A    B2:B    B3:A    B3:B/;
+my @alleles = qw/AC1:A AC1:B AC2:A AC2:B AC4:A AC4:B AC5:A AC5:B CT2:A CT2:B AG1:A AG1:B AG2:A AG2:B AG5:A AG5:B A1:A A1:B A9:A A9:B B2:A B2:B B3:A B3:B/;
 
 
 
@@ -44,7 +44,7 @@ my $lines_aoh = Text::CSV::Hashify->new( {
 
 
 # print the headers - separated by \t
-print "THIS WOULD BE A GOOD PLACE TO PRINT THE HEADERS\n";
+print "Assay Name\t Genotype Name\t Description\t type\t Term Source Ref\t Term Accession Number\t Characteristics [microsatellite (SO:0000289)]\t Term Source Ref\t Term Accession Number\t Characteristics [length (PATO:0000122)]\t Term Source Ref\t Term Accession Number\n";
 
 # this loop processes every line in the file
 foreach my $row_ref (@$lines_aoh) {
@@ -60,8 +60,8 @@ foreach my $row_ref (@$lines_aoh) {
 
       # printf prints a formatted 'template' string
       # the variable values follow it
-      printf "Sample=%s\tLocus=%s\tAllele=%s\tLength=%d\n",
-	$sample_id, $locus, $allele, $length;
+      printf "%s.%s\t %s:$length\t microsatellite %s, length %s\t simple_sequence_length_variation\t SO\t 0000207\t %s\t\t\t %s\t UO\t 0000244\n",
+	$sample_id, $locus, $allele, $sample_id, $length, $allele, $length;
     }
   } else {
     print "problem reading row\n";
