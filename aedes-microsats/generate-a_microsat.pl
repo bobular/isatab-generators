@@ -58,7 +58,7 @@ foreach my $row_ref (@$lines_aoh) {
 
       # printf prints a formatted 'template' string
       # the variable values follow
-      printf "%s\t%s.%s\t\MICRO_PCR\t\t\t\tg_microsat.txt\n", $sample_id, $sample_id, $locus
+      printf "%s\t%s.%s\tMICRO_PCR\t\t\t\tg_microsat.txt\n", $sample_id, $sample_id, $locus
 
     }
   } else {
