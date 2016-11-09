@@ -47,41 +47,63 @@ die "can't make output directory: $outdir\n" unless (-d $outdir);
 #
 # INPUT TABULAR DATA
 #
-# into hashes of hashes, e.g.
-#
-# $table->{$row_id}{$col_name}
 #
 
-## Counts.txt
-# not sure yet which columns are unique, so can't use hash of hashes
-my $counts_aoh = Text::CSV::Hashify->new( {
-					   file   => 'mock-data/Counts.txt',
-					   format => 'aoh',
-					   %parser_defaults,
-					  } );
-# make a hash of hashes using Household ID:Collection date
-my $counts = hashify_by_multiple_keys($counts_aoh->all, ':', 'HH ID', 'Date');
+#
+# expect any number of tab delimited text files in the input dir
+#
 
 
-## Anophelines.txt
-# can use unique IDs in first column
-my $anophelines_hoh = Text::CSV::Hashify->new( {
-					    file   => 'mock-data/Anophelines.txt',
-					    format => 'hoh',
-					    key => 'ID',
-					    %parser_defaults,
-					   } );
-my $anophelines = $anophelines_hoh->all;
-
-## Household data.txt
-my $hh_aoh = Text::CSV::Hashify->new( {
-				       file   => 'mock-data/Household data.txt',
-				       format => 'aoh',
-				       %parser_defaults,
-				      } );
-my $households = hashify_by_multiple_keys($hh_aoh->all, ':', 'HH ID', 'Date');
+# an array containing one row per collection (the lat/long on different input lines is merged)
+# array of hashes (colname=>value)
+my @combined_input_rows; # empty to begin with
 
 
+# do a wildcard file "search" - results are a list of filenames that match
+foreach my $filename (glob "$indir/*.txt") {
+  print "Reading data from '$filename'\n";
+
+  # read in the whole file into an (reference to an) array of hashes
+  # where the keys in the hash are the column names (from the input file)
+  # and the values are the values from 
+  my $lines_aoh = Text::CSV::Hashify->new( {
+					     file   => $filename,
+					     format => 'aoh',
+					     %parser_defaults,
+					    } )->all;
+
+  # now loop through each line of this file and fill up @combined_input_rows array.
+  my $last_line_hash;
+  foreach my $line_hash (@$lines_aoh) {
+
+    if ($line_hash->{'Type of Dwelling'}) {
+      # if the dwelling cell has a value we're in the "main" row
+      push @combined_input_rows, $line_hash;
+
+    } elsif (defined $last_line_hash && $line_hash->{GPS}) {
+      # else we're in the row with only the Easting GPS coord
+      # and we'll copy the GPS value into the previous line (that was already saved in @combined_input_rows)
+      $last_line_hash->{GPS2} = $line_hash->{GPS};
+    }
+
+    $last_line_hash = $line_hash;
+  }
+
+}
+
+
+
+#
+# now quickly check what we read in
+#
+
+foreach my $row (@combined_input_rows) {
+
+  printf "%s\t%s\t%s\t\%s\t%s\t%d\n",
+    $row->{Month}, $row->{GPS}, ($row->{GPS2} // 'N/A'),
+      $row->{Village}, $row->{Species},
+	$row->{'Total number of mosquitoes'};
+}
 
 
 #
@@ -89,8 +111,6 @@ my $households = hashify_by_multiple_keys($hh_aoh->all, ':', 'HH ID', 'Date');
 #
 
 # each row in the Anophelines table has its own ID, and is an individual mosquito
-
-my $culicine_id_num = $culicine_id_start;
 
 # headers
 my @s_samples = ( ['Source Name', 'Sample Name', 'Description', 'Material Type', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sex (EFO:0000695)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [developmental stage (EFO:0000399)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [combined feeding and gonotrophic status of insect (VSMO:0002038)]', 'Term Source Ref', 'Term Accession Number'] );
@@ -105,149 +125,14 @@ my @p_blood_species = ( [ 'Assay Name', 'Phenotype Name', 'Observable', 'Term So
 my @a_elisa_pf = ( [ 'Sample Name', 'Assay Name', 'Protocol REF', 'Raw Data File' ] );
 my @p_elisa_pf = ( [ 'Assay Name', 'Phenotype Name', 'Observable', 'Term Source Ref', 'Term Accession Number', 'Attribute', 'Term Source Ref', 'Term Accession Number', 'Value', 'Term Source Ref', 'Term Accession Number', 'Unit', 'Term Source Ref', 'Term Accession Number' ] );
 
-# actual data rows for Anopheline individuals
-foreach my $id (keys %{$anophelines}) {
-  my $anopheline = $anophelines->{$id};
-  my $hh_date = $anopheline->{'HH ID'}.':'.$anopheline->{'Collection Date'};
-  unless ($households->{$hh_date}) {
-    warn "skipping sample $id because no household/collection data for hh:date >$hh_date<\n";
-    next;
-  }
-  push @s_samples,
-    ['Norris ICEMR',
-     $id,
-     'Anopheline',
-     qw/individual EFO 0000542/,
-     sex_term($anopheline->{Sex}),
-     qw/adult IDOMAL 0000655/,
-     # males can't have a blood feeding status
-     ( $anopheline->{Sex} eq 'M' ? ('','','') : feeding_status_term($anopheline->{Blooded}) ),
-    ];
-  push @a_species,
-    [
-     $id, $id.'.species.morpho', '', 'SPECIES_MORPHO', '',
-     morpho_species_term($anopheline->{'Morph species'}),
-    ];
-  push @a_species,
-    [
-     $id, $id.'.species.pcr', '', 'SPECIES_PCR', '',
-     pcr_species_term($anopheline->{'PCR species'}),
-    ];
-  push @a_collection, collection_row($id, $households->{$hh_date});
 
-
-  # blood meal identification
-  my $blood_PCR = $anopheline->{'Blood PCR'};
-  if ($blood_PCR) {
-    my (@blood_values, $comment, $phenotype_name);
-    if ($blood_PCR eq 'no fragment') {
-      @blood_values = ('record of missing knowledge', 'OBI', '0000852');
-      $comment = 'no amplified fragment';
-      $phenotype_name = 'unidentified blood meal';
-    } else {
-      @blood_values = ($blood_PCR, '', '');
-      $comment = '';
-      $phenotype_name = "$blood_PCR blood meal";
-    }
-
-    my $assay_name = "$id.blood_PCR";
-    push @a_blood_species, [ $id, $assay_name, "BLOOD_PCR", $comment, 'p_blood_species.txt' ];
-    push @p_blood_species,
-      [
-       $assay_name, $phenotype_name,
-       'identification of source of blood meal in arthropod', 'VSMO', '0000174',
-       'organism', 'OBI', '0100026',
-       @blood_values,
-       '', '', '' # no units
-      ];
-  } # else no blood meal assay if this cell is empty
-
-  # plasmodium ELISA
-  my $ELISA_Pf = $anopheline->{'ELISA Pf'};
-  if ($ELISA_Pf) {
-    my $assay_name = "$id.Pf_ELISA";
-    push @a_elisa_pf, [ $id, $assay_name, "ELISA", 'p_elisa_pf.txt' ];
-    push @p_elisa_pf,
-      [
-       $assay_name,
-       "$ELISA_Pf Plasmodium falciparum ELISA test",
-       'arthropod infection status', 'VSMO', '0000009', 'test result', 'EFO', '0000720',
-       positive_negative_term($ELISA_Pf),
-       '', '', '' # no units
-      ];
-  } # else no assay if cell is empty
-
-
-
-
-}
-
-# now process the counts sheet to add culicines
-foreach my $hh_date (keys %{$counts}) {
-  unless ($households->{$hh_date}) {
-    warn "skipping counts row for hh:date >$hh_date< because no household/collection data\n";
-    next;
-  }
-  my $count = $counts->{$hh_date};
-  if (looks_like_number($count->{'#fem Culicines'})) {
-    for (my $i=0; $i<$count->{'#fem Culicines'}; $i++) {
-      my $id = sprintf $culicine_id_format, $culicine_id_num++;
-      push @s_samples,
-	[
-	 'Norris ICEMR',
-	 $id,
-	 'Culicine',
-	 qw/individual EFO 0000542/,
-	 sex_term('F'),
-	 qw/adult IDOMAL 0000655/,
-	 ('','','')
-	];
-
-      push @a_species,
-	[
-	 $id, $id.'.species.morpho', '', 'SPECIES_MORPHO', '',
-	 morpho_species_term('Culicine'),
-	];
-
-      push @a_collection, collection_row($id, $households->{$hh_date});
-    }
-  }
-  if (looks_like_number($count->{'#male Culicines'})) {
-    for (my $i=0; $i<$count->{'#male Culicines'}; $i++) {
-      my $id = sprintf $culicine_id_format, $culicine_id_num++;
-      push @s_samples,
-	[
-	 'Norris ICEMR',
-	 $id,
-	 'Culicine',
-	 qw/individual EFO 0000542/,
-	 sex_term('M'),
-	 qw/adult IDOMAL 0000655/,
-	 ('','','')
-	];
-
-      push @a_species,
-	[
-	 $id, $id.'.species.morpho', '', 'SPECIES_MORPHO', '',
-	 morpho_species_term('Culicine'),
-	];
-
-      push @a_collection, collection_row($id, $households->{$hh_date});
-    }
-  }
-}
-
-
-
-write_table("$outdir/s_samples.txt", \@s_samples);
-write_table("$outdir/a_species.txt", \@a_species);
-write_table("$outdir/a_collection.txt", \@a_collection);
-
-write_table("$outdir/a_blood_species.txt", \@a_blood_species);
-write_table("$outdir/p_blood_species.txt", \@p_blood_species);
-
-write_table("$outdir/a_elisa_pf.txt", \@a_elisa_pf);
-write_table("$outdir/p_elisa_pf.txt", \@p_elisa_pf);
+# write_table("$outdir/s_samples.txt", \@s_samples);
+# write_table("$outdir/a_species.txt", \@a_species);
+# write_table("$outdir/a_collection.txt", \@a_collection);
+#
+# write_table("$outdir/a_blood_species.txt", \@a_blood_species);
+# write_table("$outdir/p_blood_species.txt", \@p_blood_species);
+#
 
 
 #
