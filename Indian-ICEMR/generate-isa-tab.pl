@@ -106,16 +106,17 @@ foreach my $row (@combined_input_rows) {
 }
 
 # Convert northing and easting to WGS84
-use Coordinate;
+# Can I take the row GPS2 and make this my @??
+use Coordinate; # is this is the same as using the one at the top of the script?
 
 my @collection_site = Coordinate->new();
-$position->easting(%s);
 $position->northing(%s);
+$position->easthing(%s);
 $position->datum("WGS84")
 
 printf ("Starting position(deg,min): %f %f/n",
-	$position->easting(),
-	$postiion->northing() );
+	$position->northing(),
+	$postiion->easting() );
 
 $position->degminsec_to_WGS84();
 
