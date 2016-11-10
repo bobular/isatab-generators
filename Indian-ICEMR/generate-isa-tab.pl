@@ -106,9 +106,23 @@ foreach my $row (@combined_input_rows) {
 }
 
 # Convert northing and easting to WGS84
-my @names = ellipsoid_names;
-my ($name, $r, $sqecc) = ellipsoid_info 'wgs84';
-($zone, $east, $north) = latlon_to_utm('WGS-84', 
+use Coordinate;
+
+my @collection_site = Coordinate->new();
+$position->easting(%s);
+$position->northing(%s);
+$position->datum("WGS84")
+
+printf ("Starting position(deg,min): %f %f/n",
+	$position->easting(),
+	$postiion->northing() );
+
+$position->degminsec_to_WGS84();
+
+printf ("Starting position(deg,min): %s %s/n",
+	$position->latitude(),
+	$position->longitude() );
+
 
 #
 # SAMPLES, SPECIES and COLLECTIONS
