@@ -105,6 +105,10 @@ foreach my $row (@combined_input_rows) {
 	$row->{'Total number of mosquitoes'};
 }
 
+# Convert northing and easting to WGS84
+my @names = ellipsoid_names;
+my ($name, $r, $sqecc) = ellipsoid_info 'wgs84';
+($zone, $east, $north) = latlon_to_utm('WGS-84', 
 
 #
 # SAMPLES, SPECIES and COLLECTIONS
