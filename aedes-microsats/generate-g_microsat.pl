@@ -60,8 +60,10 @@ foreach my $row_ref (@$lines_aoh) {
 
       # printf prints a formatted 'template' string
       # the variable values follow it
-      printf "%s.%s\t %s:$length\t microsatellite %s, length %s\t simple_sequence_length_variation\t SO\t 0000207\t %s\t\t\t %s\t UO\t 0000244\n",
-	$sample_id, $locus, $allele, $sample_id, $length, $allele, $length;
+      if ($length > 0) {
+	printf "%s.%s\t %s:$length\t microsatellite %s, length %s\t simple_sequence_length_variation\t SO\t 0000207\t %s\t\t\t %s\t UO\t 0000244\n",
+	  $sample_id, $locus, $allele, $sample_id, $length, $allele, $length;
+      }
     }
   } else {
     print "problem reading row\n";
