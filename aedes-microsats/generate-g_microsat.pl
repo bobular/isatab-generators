@@ -44,7 +44,7 @@ my $lines_aoh = Text::CSV::Hashify->new( {
 
 
 # print the headers - separated by \t
-print "Assay Name\t Genotype Name\t Description\t type\t Term Source Ref\t Term Accession Number\t Characteristics [microsatellite (SO:0000289)]\t Term Source Ref\t Term Accession Number\t Characteristics [length (PATO:0000122)]\t Term Source Ref\t Term Accession Number\n";
+print "Assay Name\tGenotype Name\tDescription\ttype\tTerm Source Ref\tTerm Accession Number\tCharacteristics [microsatellite (SO:0000289)]\tTerm Source Ref\tTerm Accession Number\tCharacteristics [length (PATO:0000122)]\tTerm Source Ref\tTerm Accession Number\n";
 
 # this loop processes every line in the file
 foreach my $row_ref (@$lines_aoh) {
@@ -61,7 +61,7 @@ foreach my $row_ref (@$lines_aoh) {
       # printf prints a formatted 'template' string
       # the variable values follow it
       if ($length > 0) {
-	printf "%s.%s\t %s:$length\t microsatellite %s, length %s\t simple_sequence_length_variation\t SO\t 0000207\t %s\t\t\t %s\t UO\t 0000244\n",
+	printf "%s.%s\t%s:$length\tmicrosatellite %s, length %s\tsimple_sequence_length_variation\tSO\t0000207\t%s\t\t\t%s\tUO\t0000244\n",
 	  $sample_id, $locus, $allele, $sample_id, $length, $allele, $length;
       }
     }
