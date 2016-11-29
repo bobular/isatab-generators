@@ -46,7 +46,7 @@ my $lines_aoh = Text::CSV::Hashify->new( {
 
 
 # print the headers - separated by \t
-print "Sample Name\t Assay Name\t Protocol REF\t Performer\t Date\t Comment[note]\t Raw Data File\n";
+print "Sample Name\tAssay Name\tProtocol REF\tPerformer\tDate\tComment[note]\tRaw Data File\n";
 
 # this loop processes every line in the file
 foreach my $row_ref (@$lines_aoh) {
