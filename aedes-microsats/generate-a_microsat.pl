@@ -25,10 +25,7 @@ GetOptions(
 	   "inputfile=s"=>\$inputfile,
 	  );
 
-# edit the :A :B out of these and make unique
-# e.g. AC1 AC2 AC4 etc
-my @loci = qw/AC1 AC2 AC4 AC5 CT2 AG1 AG2 AG5 A1 A9 B2 B3/;
-
+my @alleles = qw/AC1:A AC1:B AC2:A AC2:B AC4:A AC4:B AC5:A AC5:B CT2:A CT2:B AG1:A AG1:B AG2:A AG2:B AG5:A AG5:B A1:A A1:B A9:A A9:B B2:A B2:B B3:A B3:B/;
 
 
 #
@@ -53,13 +50,19 @@ foreach my $row_ref (@$lines_aoh) {
   my $sample_id = $row_ref->{"Sample ID"};
   if (defined $sample_id) {
 
+    my %done_locus;
     # now do every allele
-    foreach my $locus (@loci) {
+    foreach my $allele (@alleles) {
+      my $length = $row_ref->{$allele};
+
+      # get the AC1 part out of AC1:A
+      my ($locus, $a_or_b) = split /:/, $allele;
 
       # printf prints a formatted 'template' string
-      # the variable values follow
-      printf "%s\t%s.%s\tMICRO_PCR\t\t\t\tg_microsat.txt\n", $sample_id, $sample_id, $locus
-
+      # the variable values follow it
+      if ($length > 0 && !$done_locus{$locus}++) {
+	printf "%s\t%s.%s\tMICRO_PCR\t\t\t\tg_microsat.txt\n", $sample_id, $sample_id, $locus;
+      }
     }
   } else {
     print "problem reading row\n";
