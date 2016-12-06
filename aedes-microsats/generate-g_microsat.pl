@@ -65,7 +65,7 @@ foreach my $row_ref (@$lines_aoh) {
 	  $sample_id, $locus,           # Assay Name
 	    $allele, $length,           # Genotype Name
 	      $locus, $a_or_b, $length, # Description
-		$allele,                # Characteristics [microsatellite (SO:0000289)]
+		$locus,                # Characteristics [microsatellite (SO:0000289)]
 		  $length;              # Characteristics [length (PATO:0000122)]
       }
     }
