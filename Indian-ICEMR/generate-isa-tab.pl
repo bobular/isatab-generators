@@ -18,7 +18,7 @@ use Text::CSV::Hashify;
 use Getopt::Long;
 use Scalar::Util qw(looks_like_number);
 use DateTime::Format::Strptime;
-use Geo::Coordinates::UTM;
+use Geo::Coordinates::DecimalDegrees;
 
 my %parser_defaults = (binary => 1, eol => $/, sep_char => "\t");
 my $indir;
@@ -91,58 +91,86 @@ foreach my $filename (glob "$indir/*.txt") {
 
 }
 
+# #
+# Set up headers for all the output sheets.
+#
+# each sheet will be an array of rows.
+# first row contains the headers
+#
+#
+my @s_samples = ( ['Source Name', 'Sample Name', 'Description', 'Comment [comment]', 'Material Type', 'Term Source Ref', 'Term Accession Number','Comment [age]', 'Characteristics [sex (EFO:0000695)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [developmental stage (EFO:0000399)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [age (EFO:0000246)]', 'Unit', 'Term Source Ref', 'Term Accession Number' ] );
+
+my @a_species = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Date', 'Characteristics [species assay result (VBcv:0000961)]', 'Term Source Ref', 'Term Accession Number' ] );
+
+my @a_collection = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Performer', 'Date', 'Characteristics [Collection site (VBcv:0000831)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [Collection site latitude (VBcv:0000817)]', 'Characteristics [Collection site longitude (VBcv:0000816)]', 'Characteristics [Collection site country (VBcv:0000701)]' ] ); # 'Characteristics [Collection site location (VBcv:0000698)]', 'Characteristics [Collection site village (VBcv:0000829)]', 'Characteristics [Collection site locality (VBcv:0000697)]', 'Characteristics [Collection site suburb (VBcv:0000845)]', 'Characteristics [Collection site city (VBcv:0000844)]', 'Characteristics [Collection site county (VBcv:0000828)]', 'Characteristics [Collection site district (VBcv:0000699)]', 'Characteristics [Collection site province (VBcv:0000700)]', 'Characteristics [Collection site country (VBcv:0000701)]' ] );
+
+my @a_blood_species = ( [ 'Sample Name', 'Assay Name', 'Protocol REF', 'Comment [note]', 'Characteristics [sample size (VBcv:0000983)]', 'Raw Data File' ] );
+my @p_blood_species = ( [ 'Assay Name', 'Phenotype Name', 'Observable', 'Term Source Ref', 'Term Accession Number', 'Attribute', 'Term Source Ref', 'Term Accession Number', 'Value', 'Unit', 'Term Source Ref', 'Term Accession Number', 'Characteristics [organism (OBI:0100026)]' ] );
+
 
 
 #
-# now quickly check what we read in
+# This is the main loop for generating ISA-Tab data
 #
 
 foreach my $row (@combined_input_rows) {
 
-  printf "%s\t%s\t%s\t\%s\t%s\t%d\n",
-    $row->{Month}, $row->{GPS}, ($row->{GPS2} // 'N/A'),
-      $row->{Village}, $row->{Species},
-	$row->{'Total number of mosquitoes'};
+  # Convert northing and easting to WGS84
+  # Can I take the row GPS2 and make this my @??
+  # is this is the same as using the one at the top of the script?
+
+
+  my $lat_deg_min = $row->{GPS};
+  my $long_deg_min = $row->{GPS2}; # this is undefined for "No GPS record" lines
+
+  my $lat_decimal = ''; # we will write this empty string to a_collection if coord parsing fails
+  my $long_decimal = ''; # ditto
+
+  if (defined $lat_deg_min) {
+    my ($lat_deg, $lat_min) = $lat_deg_min =~ /N (\d+) \D (\d+ (?: \.\d+ )?)/x;
+    if (defined $lat_deg) {
+      $lat_decimal = dm2decimal($lat_deg, $lat_min);
+    } else {
+      warn "'$lat_deg_min' was not expected latitude deg/min format\n";
+    }
+  } else {
+    die "Unexpected empty latitude 'GPS' column in row\n";
+  }
+
+  if (defined $long_deg_min) {
+    my ($long_deg, $long_min) = $long_deg_min =~ /E (\d+) \D (\d+ (?: \.\d+ )?)/x;
+    if (defined $long_deg) {
+      $long_decimal = dm2decimal ($long_deg, $long_min);
+    } else {
+      warn "'$long_deg_min' was not expected longitude deg/min format\n";
+    }
+  }
+
+  # check that total moz = sum of bloodmeals
+  my $total_mossies = $row->{'Total number of mosquitoes'};
+
+  my @bm_headings = qw/BCE:BM:Bovine	BCE:BM:Human	BCE:BM:B+H BCE:BM:Unfed	BCE:BM:Others AD:BM:Bovine AD:BM:Human AD:BM:B+H AD:BM:Unfed AD:BM:Others/;
+  my $sum_bloodmeal = 0;
+  foreach my $bm_heading (@bm_headings) {
+    $sum_bloodmeal += ($row->{$bm_heading} || 0);
+  }
+
+
+
+  printf "%s\t%s\t%s\t\%s\t%s\t%d\t%d\t%s\n",
+    $row->{Month},
+      (looks_like_number($lat_decimal) ? sprintf("%.4f", $lat_decimal) : $lat_decimal ),
+	(looks_like_number($long_decimal) ? sprintf("%.4f", $long_decimal) : $long_decimal ),
+	  $row->{Village}, $row->{Species},
+	    $total_mossies,
+	      $sum_bloodmeal,
+		( $total_mossies == $sum_bloodmeal ? 'OK' : '<<<<NOT EQUAL>>>>' );
+
 }
 
-# Convert northing and easting to WGS84
-# Can I take the row GPS2 and make this my @??
-use Coordinate; # is this is the same as using the one at the top of the script?
-
-my @collection_site = Coordinate->new();
-$position->northing(%s);
-$position->easthing(%s);
-$position->datum("WGS84")
-
-printf ("Starting position(deg,min): %f %f/n",
-	$position->northing(),
-	$postiion->easting() );
-
-$position->degminsec_to_WGS84();
-
-printf ("Starting position(deg,min): %s %s/n",
-	$position->latitude(),
-	$position->longitude() );
 
 
-#
-# SAMPLES, SPECIES and COLLECTIONS
-#
 
-# each row in the Anophelines table has its own ID, and is an individual mosquito
-
-# headers
-my @s_samples = ( ['Source Name', 'Sample Name', 'Description', 'Material Type', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sex (EFO:0000695)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [developmental stage (EFO:0000399)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [combined feeding and gonotrophic status of insect (VSMO:0002038)]', 'Term Source Ref', 'Term Accession Number'] );
-
-my @a_species = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Date', 'Characteristics [species assay result (VBcv:0000961)]', 'Term Source Ref', 'Term Accession Number' ] );
-
-my @a_collection = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Date', 'Comment [Household ID]', 'Comment [Hse]', 'Comment [Room]', 'Comment [Trap ID]', 'Comment [Trap location]', 'Characteristics [building roof (ENVO:01000472)]', 'Term Source Ref', 'Term Accession Number', 'Comment [House eave]', 'Comment [Fire burn last night]', 'Comment [number ITN]', 'Comment [number people sleeping]', 'Comment [number people sleeping under ITN]', 'Comment [data comment]', 'Characteristics [Collection site (VBcv:0000831)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [Collection site latitude (VBcv:0000817)]', 'Characteristics [Collection site longitude (VBcv:0000816)]', 'Characteristics [Collection site altitude (VBcv:0000832)]', 'Comment [UTM coordinates]' ] ); # 'Characteristics [Collection site location (VBcv:0000698)]', 'Characteristics [Collection site village (VBcv:0000829)]', 'Characteristics [Collection site locality (VBcv:0000697)]', 'Characteristics [Collection site suburb (VBcv:0000845)]', 'Characteristics [Collection site city (VBcv:0000844)]', 'Characteristics [Collection site county (VBcv:0000828)]', 'Characteristics [Collection site district (VBcv:0000699)]', 'Characteristics [Collection site province (VBcv:0000700)]', 'Characteristics [Collection site country (VBcv:0000701)]' ] );
-
-my @a_blood_species = ( [ 'Sample Name', 'Assay Name', 'Protocol REF', 'Comment [note]', 'Raw Data File' ] );
-my @p_blood_species = ( [ 'Assay Name', 'Phenotype Name', 'Observable', 'Term Source Ref', 'Term Accession Number', 'Attribute', 'Term Source Ref', 'Term Accession Number', 'Value', 'Term Source Ref', 'Term Accession Number', 'Unit', 'Term Source Ref', 'Term Accession Number' ] );
-
-my @a_elisa_pf = ( [ 'Sample Name', 'Assay Name', 'Protocol REF', 'Raw Data File' ] );
-my @p_elisa_pf = ( [ 'Assay Name', 'Phenotype Name', 'Observable', 'Term Source Ref', 'Term Accession Number', 'Attribute', 'Term Source Ref', 'Term Accession Number', 'Value', 'Term Source Ref', 'Term Accession Number', 'Unit', 'Term Source Ref', 'Term Accession Number' ] );
 
 
 # write_table("$outdir/s_samples.txt", \@s_samples);
