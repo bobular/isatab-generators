@@ -60,8 +60,8 @@ my @combined_input_rows; # empty to begin with
 
 
 # do a wildcard file "search" - results are a list of filenames that match
-foreach my $filename (glob "$indir/*.txt") {
-  print "Reading data from '$filename'\n";
+foreach my $filename (glob "$indir/*.{txt,tsv}") {
+  warn "Reading data from '$filename'\n";
 
   # read in the whole file into an (reference to an) array of hashes
   # where the keys in the hash are the column names (from the input file)
@@ -98,9 +98,10 @@ foreach my $filename (glob "$indir/*.txt") {
 # first row contains the headers
 #
 #
-my @s_samples = ( ['Source Name', 'Sample Name', 'Description', 'Comment [comment]', 'Material Type', 'Term Source Ref', 'Term Accession Number','Comment [age]', 'Characteristics [sex (EFO:0000695)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [developmental stage (EFO:0000399)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [age (EFO:0000246)]', 'Unit', 'Term Source Ref', 'Term Accession Number' ] );
 
-my @a_species = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Date', 'Characteristics [species assay result (VBcv:0000961)]', 'Term Source Ref', 'Term Accession Number' ] );
+my @s_samples = ( ['Source Name', 'Sample Name', 'Material Type', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sex (EFO:0000695)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [developmental stage (EFO:0000399)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [age (EFO:0000246)]', 'Unit', 'Term Source Ref', 'Term Accession Number' ] );
+
+my @a_species = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Protocol REF', 'Characteristics [species assay result (VBcv:0000961)]', 'Term Source Ref', 'Term Accession Number' ] );
 
 my @a_collection = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Performer', 'Date', 'Characteristics [Collection site (VBcv:0000831)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [Collection site latitude (VBcv:0000817)]', 'Characteristics [Collection site longitude (VBcv:0000816)]', 'Characteristics [Collection site country (VBcv:0000701)]' ] ); # 'Characteristics [Collection site location (VBcv:0000698)]', 'Characteristics [Collection site village (VBcv:0000829)]', 'Characteristics [Collection site locality (VBcv:0000697)]', 'Characteristics [Collection site suburb (VBcv:0000845)]', 'Characteristics [Collection site city (VBcv:0000844)]', 'Characteristics [Collection site county (VBcv:0000828)]', 'Characteristics [Collection site district (VBcv:0000699)]', 'Characteristics [Collection site province (VBcv:0000700)]', 'Characteristics [Collection site country (VBcv:0000701)]' ] );
 
@@ -113,7 +114,16 @@ my @p_blood_species = ( [ 'Assay Name', 'Phenotype Name', 'Observable', 'Term So
 # This is the main loop for generating ISA-Tab data
 #
 
+# sample number counters (for Sample Name) for each sib species
+my %sample_number; # first level key is Species (raw from spreadsheet as there are prob no typos)
+                   # second level key is sibling code also from spreadsheet, BCE, AD, T and S
+                   # value stored in the two-level hash is the number
+                   #
+                   # $sample_number{'An. culicifacies'}{BCE} = 123
+
+
 foreach my $row (@combined_input_rows) {
+
 
   # Convert northing and easting to WGS84
   # Can I take the row GPS2 and make this my @??
@@ -149,31 +159,71 @@ foreach my $row (@combined_input_rows) {
   # check that total moz = sum of bloodmeals
   my $total_mossies = $row->{'Total number of mosquitoes'};
 
-  my @bm_headings = qw/BCE:BM:Bovine	BCE:BM:Human	BCE:BM:B+H BCE:BM:Unfed	BCE:BM:Others AD:BM:Bovine AD:BM:Human AD:BM:B+H AD:BM:Unfed AD:BM:Others/;
+  my @culicifacies_bm_headings = qw/BCE:BM:Bovine	BCE:BM:Human	BCE:BM:B+H BCE:BM:Unfed	BCE:BM:Others AD:BM:Bovine AD:BM:Human AD:BM:B+H AD:BM:Unfed AD:BM:Others/;
+  my @fluviatilis_bm_headings = qw/T:BM:Bovine	T:BM:Human	T:BM:B+H	T:BM:Unfed	T:BM:Others	S:BM:Bovine	S:BM:Human	S:BM:B+H	S:BM:Unfed	S:BM:Others/;
+
+  # sanity check for mosquito numbers
   my $sum_bloodmeal = 0;
-  foreach my $bm_heading (@bm_headings) {
+  foreach my $bm_heading (@culicifacies_bm_headings, @fluviatilis_bm_headings) {
     $sum_bloodmeal += ($row->{$bm_heading} || 0);
+  }
+  if ($sum_bloodmeal != $total_mossies) {
+    warn "<<<<< mosquito numbers (sum is $sum_bloodmeal, total expected is $total_mossies) need checking for $row->{Month} $row->{Species} >>>>>\n";
+    next; # go straight to next row, do not collect...
+  }
+
+  # now we loop through each blood meal type and create an entry in the sample sheet
+  # each mossie needs a Sample Name
+
+  foreach my $bm_heading (@culicifacies_bm_headings, @fluviatilis_bm_headings) {
+    # get the subspecies code from the heading
+    my ($subspecies, $always_bm, $bm_type) = split /:/, $bm_heading;
+
+    my $num_mossies = $row->{$bm_heading};
+    if ($num_mossies) {
+      for (1 .. $num_mossies) {
+	# MAIN LOOP PER MOSQUITO #
+	my $sample_name = sprintf "%s %s %04d", $row->{Species}, $subspecies, ++$sample_number{$row->{Species}}{$subspecies};
+	# replace non alphanumeric with underscore
+	$sample_name =~ s/\W+/_/g;
+
+	#push a reference to an array of row data into s_samples
+
+	push @s_samples, [ '2016-indian-icemr', $sample_name, 'individual', 'EFO', '0000542', 'female', 'PATO', '0000383', 'adult', 'IDOMAL', '0000655' ];
+	push @a_species, [ $sample_name, '$sample_name.species', 'morphological identification and allele specific PCR', 'SPECIES', 'SPECIES_SIB', morpho_species_term($row->{Species}) ];
+
+#	print STDOUT "created '$sample_name' from $row->{Village} that dined on $bm_type\n";
+      }
+    }
+
   }
 
 
+  #sanity checking output
+#printf "%s\t%s\t%s\t\%s\t%s\t%d\t%d\t%s\n",
+#  $row->{Month},
+#    (looks_like_number($lat_decimal) ? sprintf("%.4f", $lat_decimal) : $lat_decimal ),
+#	(looks_like_number($long_decimal) ? sprintf("%.4f", $long_decimal) : $long_decimal ),
+#	  $row->{Village}, $row->{Species},
+#	    $total_mossies,
+#	      $sum_bloodmeal,
+#		( $total_mossies == $sum_bloodmeal ? 'OK' : '<<<<NOT EQUAL>>>>' );
 
-  printf "%s\t%s\t%s\t\%s\t%s\t%d\t%d\t%s\n",
-    $row->{Month},
-      (looks_like_number($lat_decimal) ? sprintf("%.4f", $lat_decimal) : $lat_decimal ),
-	(looks_like_number($long_decimal) ? sprintf("%.4f", $long_decimal) : $long_decimal ),
-	  $row->{Village}, $row->{Species},
-	    $total_mossies,
-	      $sum_bloodmeal,
-		( $total_mossies == $sum_bloodmeal ? 'OK' : '<<<<NOT EQUAL>>>>' );
-
-}
-
-
+ #printf "Sample Name\tAssay Name\tProtocolREF\tComment [note]\tCharacteristics [sample size (VBcv0000983)]
 
 
+}# end of foreach $row in combined rows
 
 
-# write_table("$outdir/s_samples.txt", \@s_samples);
+
+# printing an array with tab separators
+# print join("\t", @headings)."\n";
+
+
+
+
+write_table("$outdir/s_samples.txt", \@s_samples);
+
 # write_table("$outdir/a_species.txt", \@a_species);
 # write_table("$outdir/a_collection.txt", \@a_collection);
 #
@@ -238,14 +288,11 @@ sub building_roof_term {
 sub morpho_species_term {
   my $input = shift;
   given ($input) {
-    when (/^An\. funestus$/) {
-      return ('Anopheles funestus sensu lato', 'VBsp', '0003478')
+    when (/^An\. culicifacies$/) {
+      return ('Anopheles fluviatilis', 'VBsp', '0003475')
     }
-    when (/^An\. gambiae$/) {
+    when (/^An\. fluviatilis$/) {
       return ('Anopheles gambiae sensu lato', 'VBsp', '0003480')
-    }
-    when (/^Culicine$/) {
-      return ('Culicini', 'VBsp', '0003820')
     }
     default {
       die "fatal error: unknown morpho_species_term >$input<\n";
@@ -256,14 +303,17 @@ sub morpho_species_term {
 sub pcr_species_term {
   my $input = shift;
   given ($input) {
-    when (/^An\. funestus$/) {
-      return ('Anopheles funestus', 'VBsp', '0003834')
+    when (/^BCE$/) {
+      return ('Anopheles culicifacies BCE subgroup', 'VBsp', '0000645')
     }
-    when (/^An\. leesoni$/) {
-      return ('Anopheles leesoni', 'VBsp', '0003509')
+    when (/^AD$/) {
+      return ('Anopheles culicifacies AD subgroup', 'VBsp', '0000471')
     }
-    when (/^An\. gambiae s\.s\.$/) {
-      return ('Anopheles gambiae', 'VBsp', '0003829')
+    when (/^S$/) {
+      return ('Anopheles fluviatilis S', 'VBsp', '0000647')
+    }
+    when (/^T$/) {
+      return ('Anopheles fluviatilis T', 'VBsp', '0000650')
     }
     default {
       die "fatal error: unknown pcr_species_term >$input<\n";
