@@ -1,0 +1,5 @@
+Scripts for converting 2013-2014 sample Iowa surveillance data to ISA-Tab.
+
+Do not commit the data to git!
+
+resolve-site-names.pl will try to match the site names from the data sheets with the collection site sheets.
