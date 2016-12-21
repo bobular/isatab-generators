@@ -8,9 +8,11 @@
 
 use warnings;
 use strict;
+use feature "switch";
 
 use Text::CSV::Hashify;
 use Getopt::Long;
+use DateTime::Format::Strptime;
 
 my $locations_file = 'private-data/site-lookups-DL/sorted-unique.txt';
 my $outdir;
@@ -19,6 +21,10 @@ GetOptions(
 	   "locations=s" => \$locations_file,
 	   "outdir=s" => \$outdir,
 	  );
+
+die "must give -outdir xxx on commanline\n" unless ($outdir);
+
+mkdir $outdir unless -d $outdir;
 
 my (@raw_data_files) = @ARGV;
 
@@ -49,7 +55,7 @@ while ( my $row = $csv->getline( $locations_fh ) ) {
   }
 
   unless (defined $latitude && defined $longitude) {
-    warn "acknowledging dodgy site: '$county' '$raw_site' => '$official_site'\n";
+    warn "acknowledging dodgy site to be skipped: '$county' '$official_site'\n";
     $skipped_site{$raw_site_key} = 1;
     next;
   }
@@ -62,6 +68,17 @@ while ( my $row = $csv->getline( $locations_fh ) ) {
 				  };
 }
 
+my @s_samples = ( ['Source Name', 'Sample Name', 'Description', 'Material Type', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sex (EFO:0000695)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [developmental stage (EFO:0000399)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sample size (VBcv:0000983)]' ] );
+
+my @a_species = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Characteristics [species assay result (VBcv:0000961)]', 'Term Source Ref', 'Term Accession Number' ] );
+
+my @a_collection = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Date', 'Characteristics [Collection site (VBcv:0000831)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [Collection site latitude (VBcv:0000817)]', 'Characteristics [Collection site longitude (VBcv:0000816)]' ] );
+
+
+# serial number counter used in a_collection Assay Name
+my $collection_counter = 0;
+# then use a four (!) level hash to remember which Assay Name to use for each combination of Village, Date and Location
+my %collection_name; # $collection_name{COUNTY}{SITENAME}{TRAPTYPE}{DATE} = "County_Site_TrapType_Date_C001"
 
 
 #
@@ -89,9 +106,92 @@ foreach my $raw_data_file (@raw_data_files) {
       next;
     }
 
+
     # find the true location
     my $location = $site2location{$raw_site_key};
     warn "missing location data for '$raw_site_key'\n" unless defined $location;
+
+    # clean up the dates
+    my $date = $row->{Date} || $row->{Collected};
+    die unless $date;
+
+    if ($date =~ /,|and/ || ($date =~ m{^(\d+)/(\d+)-(\d+)/(\d+)$} && ($1==$3 || $1+1==$3))) {
+      warn "skipping data (for now) with yearless date '$date' in $raw_data_file\n";
+
+      # TO DO
+      # can get year from filename of course... hacky though!
+      # and add as ranges
+      # we still have a problem with discontinuous ranges though, e.g. '6/9, 6/10, 6/13'  - June 9, 10 and 13!
+
+      next;
+    }
+
+    # incoming dates are in the format 8/22/2013 (in both types of file)
+
+    # edge case date range in the day of month...
+    if ($date =~ m{^(\d+)/(\d+)-(\d+)/(\d{4})$}) {
+      my ($month, $day1, $day2, $year) = ($1,$2,$3,$4);
+      my $date1 = fix_date_to_iso("$month/$day1/$year");
+      my $date2 = fix_date_to_iso("$month/$day2/$year");
+      $date = "$date1/$date2"; # ISA-Tab Chado loader friendly date range
+    } elsif ($date =~ m{^(\d+)/(\d+)-(\d+)/(\d+)/(\d{2})$}) { # a range straddling a month boundary
+      my ($month1, $day1, $month2, $day2, $year) = ($1,$2,$3,$4,$5);
+      my $date1 = fix_date_to_iso("$month1/$day1/20$year");
+      my $date2 = fix_date_to_iso("$month2/$day2/20$year");
+      $date = "$date1/$date2"; # ISA-Tab Chado loader friendly date range
+    } elsif (0 && $date =~ m{^(\d+)/(\d+)/(\d{2})$}) {
+      my ($month, $day, $year) = ($1,$2,$3);
+      die "bad year" if ($year > 20);
+      # two digit year edge case
+      $date = fix_date_to_iso("$month/$day/20$year")
+    } else {
+      $date = fix_date_to_iso($date);
+    }
+
+
+    # (for CDC/gravid)
+    my $trap_type = $row->{Trap} || "NJLT";
+
+    # figure out the collection assay name
+    my $a_collection_assay_name = $collection_name{$location->{county}}{$location->{name}}{$trap_type}{$date} //= whitespace_to_underscore(sprintf "%s %s %s %s C%04d", $location->{county}, $location->{name}, $trap_type, $date, ++$collection_counter);
+
+    # NEED TO FIGURE OUT HOW TO DEAL WITH CDC (all in one row) vs NJLT (one species per row) 
+    #
+    # and also ask Dan about ZEROES for the CDC data
+    #
+
+    my %species_counts;
+    # create a hash: sanitised_species_name => { count => 123, sex => mf,
+    #                                            term_source_ref => 'VBsp', term_accession_number => '0001234',
+    #                                            WNV => 01u SLE => 01u, WEE => 01u, LACV => 01u }
+    # mf means male, female
+    # where 01u means 0, 1 or undef
+    # and the viral assay counts are optional (not available for CDC)
+
+    if ($row->{Species}) {
+      my ($full_species_name, $species_tsr, $species_tan) = species_term($row->{Species});
+      $species_counts{$full_species_name} = {
+					     count => $row->{'Pool Size'},
+					     sex => 'female',
+					     term_source_ref => $species_tsr,
+					     term_accession_number => $species_tan,
+					     WNV => sanitise_virus_result($row->{WNV}),
+					     SLE => sanitise_virus_result($row->{SLE}),
+					     WEE => sanitise_virus_result($row->{WEE}),
+					     LACV => sanitise_virus_result($row->{LACV}),
+					    };
+    } elsif ($row->{location}) {
+
+    } else {
+      die "unexpected parsing error";
+    }
+
+    # do s_sample row
+    # my $sample_name = whitespace_to_underscore(sprintf "%s %04d", $row);
+
+    # push @s_samples, $raw_data_file, $sample_name, 'TBC?', 999;
+
+
 
   #  print "OK for $location->{name} from $location->{county}\n";
 
@@ -99,10 +199,109 @@ foreach my $raw_data_file (@raw_data_files) {
 }
 
 
+write_table("$outdir/s_samples.txt", \@s_samples);
+write_table("$outdir/a_species.txt", \@a_species);
+write_table("$outdir/a_collection.txt", \@a_collection);
 
 
+############# lookup subs ################
 
 
+my $cpg_warned;
+
+sub species_term {
+  my $input = shift;
+  given ($input) {
+    when (/^Ae\. sticticus$/) {
+      return ('Aedes sticticus', 'VBsp', '0001144')
+    }
+    when (/^Ae\. vexans ?$/) {
+      return ('Aedes vexans', 'VBsp', '0000372')
+    }
+    when (/^An\. quadrimaculatus$/) {
+      return ('Anopheles quadrimaculatus', 'VBsp', '0003441')
+    }
+    when (/^Cx\. tarsalis$/) {
+      return ('Culex tarsalis', 'VBsp', '0002687')
+    }
+    when (/^Ae\. trivittatus$/) {
+      return ('Aedes trivittatus', 'VBsp', '0001159')
+    }
+    when (/^An\. punctipennis$/) {
+      return ('Anopheles punctipennis', 'VBsp', '0003439')
+    }
+    when (/^An\. walkeri$/) {
+      return ('Anopheles walkeri', 'VBsp', '0003469')
+    }
+    when (/^CPG$/ or /^Cx\. pipiens group$/) {
+      warn "CPG/culex pipiens group not correctly handled yet\n" unless ($cpg_warned++);
+      return ('Culex', 'VBsp', '0002482')
+    }
+    when (/^Ae\. japonicus$/) {
+      return ('?TBD?', 'VBsp', '?TBD?')
+    }
+    when (/^Ae\. nigromaculis$/) {
+      return ('?TBD?', 'VBsp', '?TBD?')
+    }
+    when (/^Ae\. sollicitans$/) {
+      return ('?TBD?', 'VBsp', '?TBD?')
+    }
+    when (/^Ae\. triseriatus ?$/) {
+      return ('?TBD?', 'VBsp', '?TBD?')
+    }
+    when (/^An\. earlei$/) {
+      return ('?TBD?', 'VBsp', '?TBD?')
+    }
+    when (/^Cq\. perturbans$/) {
+      return ('?TBD?', 'VBsp', '?TBD?')
+    }
+    when (/^Cs\. inornata$/) {
+      return ('?TBD?', 'VBsp', '?TBD?')
+    }
+    when (/^Cs\. Inornata$/) {
+      return ('?TBD?', 'VBsp', '?TBD?')
+    }
+    when (/^Cx\. erraticus$/) {
+      return ('?TBD?', 'VBsp', '?TBD?')
+    }
+    when (/^Cx\. territans$/) {
+      return ('?TBD?', 'VBsp', '?TBD?')
+    }
+    when (/^Or\. signifera$/) {
+      return ('?TBD?', 'VBsp', '?TBD?')
+    }
+    when (/^Ps\. ciliata$/) {
+      return ('?TBD?', 'VBsp', '?TBD?')
+    }
+    when (/^Ps\. columbiae$/) {
+      return ('?TBD?', 'VBsp', '?TBD?')
+    }
+    when (/^Ps. cyanescens$/) {
+      return ('?TBD?', 'VBsp', '?TBD?')
+    }
+    when (/^Ps. ferox$/) {
+      return ('?TBD?', 'VBsp', '?TBD?')
+    }
+    when (/^Ps. horrida$/) {
+      return ('?TBD?', 'VBsp', '?TBD?')
+    }
+    when (/^Ur. sapphirina$/) {
+      return ('?TBD?', 'VBsp', '?TBD?')
+    }
+    when (/^Cs. impatiens$/) {
+      return ('?TBD?', 'VBsp', '?TBD?')
+    }
+    when (/^Cx. restuans ?$/) {
+      return ('?TBD?', 'VBsp', '?TBD?')
+    }
+    default {
+     die "fatal error: unknown morpho_species_term >$input<\n";
+   }
+  }
+}
+
+
+#############
 
 sub load_tsv_file {
   my ($filename) = @_;
@@ -111,4 +310,45 @@ sub load_tsv_file {
 				   format => 'aoh',
 				   %tsv_parser_defaults,
 				  } )->all;
+}
+
+sub write_table {
+  my ($filename, $arrayref) = @_;
+  my $handle;
+  open($handle, ">", $filename) || die "problem opening $filename for writing\n";
+  my $tsv_writer = Text::CSV->new ( \%tsv_parser_defaults );
+  foreach my $row (@{$arrayref}) {
+    $tsv_writer->print($handle, $row);
+  }
+  close($handle);
+  warn "sucessfully wrote $filename\n";
+}
+
+
+sub fix_date_to_iso {
+  my $input = shift;
+  my $date_parser = DateTime::Format::Strptime->new(
+						    pattern   => '%m/%d/%Y',
+						    locale    => 'en_US',
+						    time_zone => 'Europe/London',
+						   );
+  my $dt = $date_parser->parse_datetime($input);
+
+  die "could not parse date '$input'\n" unless (defined $dt);
+
+  my $iso_ish_date = sprintf "%d-%02d-%02d", $dt->year, $dt->month, $dt->day;
+  return $iso_ish_date;
+}
+
+sub whitespace_to_underscore {
+  my ($input) = @_;
+  $input =~ s/\s+/_/g;
+  return $input;
+}
+
+sub sanitise_virus_result {
+  my ($input) = @_;
+  return 1 if ($input && $input =~ /pos/i);
+  return 0 if ($input && $input =~ /neg/i);
+  return undef;
 }
