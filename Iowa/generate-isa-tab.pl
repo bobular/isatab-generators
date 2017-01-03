@@ -72,7 +72,7 @@ my @s_samples = ( ['Source Name', 'Sample Name', 'Description', 'Material Type',
 
 my @a_species = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Characteristics [species assay result (VBcv:0000961)]', 'Term Source Ref', 'Term Accession Number' ] );
 
-my @a_collection = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Date', 'Characteristics [Collection site (VBcv:0000831)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [Collection site latitude (VBcv:0000817)]', 'Characteristics [Collection site longitude (VBcv:0000816)]' ] );
+my @a_collection = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Date', 'Comment [Raw date]', 'Characteristics [Collection site (VBcv:0000831)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [Collection site latitude (VBcv:0000817)]', 'Characteristics [Collection site longitude (VBcv:0000816)]' ] );
 
 
 # serial number counter used in a_collection Assay Name
@@ -162,9 +162,9 @@ foreach my $raw_data_file (@raw_data_files) {
       $date = fix_date_to_iso($date);
     }
 
-    if ($orig_date =~ /,|-|and/) {
-      warn "$orig_date ---> $date\n";
-    }
+    #if ($orig_date =~ /,|-|and/) {
+    #  warn "$orig_date ---> $date\n";
+    #}
 
     # (for CDC/gravid)
     my $trap_type = $row->{Trap} || "NJLT";
@@ -198,7 +198,18 @@ foreach my $raw_data_file (@raw_data_files) {
 					     LACV => sanitise_virus_result($row->{LACV}),
 					    };
     } elsif ($row->{location}) {
+      # all the species count headings in the NJLT files end in M or F (male/female)
+      foreach my $heading (grep /\s+[MF]$/, keys %$row) {
+	my ($species_heading, $mf) = $heading =~ /^(.+?)\s+([MF])/;
+	my ($full_species_name, $species_tsr, $species_tan) = species_term($species_heading);
+	my ($sex, $sex_tsr, $sex_tan) = sex_term($mf);
 
+
+	#warn "do something with $heading -> $row->{$heading}\n";
+	# TO DO - probably skip zeroes for the first pass at ISA-Tab/Chado-loading
+	# then deal with zeroes for both CDC and NJLT data properly
+
+      }
     } else {
       die "unexpected parsing error";
     }
@@ -229,91 +240,220 @@ my $cpg_warned;
 sub species_term {
   my $input = shift;
   given ($input) {
-    when (/^Ae\. sticticus$/) {
+    when (/^(Ae\.|Aedes) sticticus$/) {
       return ('Aedes sticticus', 'VBsp', '0001144')
     }
-    when (/^Ae\. vexans ?$/) {
+    when (/^(Ae\.|Aedes) vexans ?$/) {
       return ('Aedes vexans', 'VBsp', '0000372')
     }
-    when (/^An\. quadrimaculatus$/) {
+    when (/^(An\.|Anopheles) quadrimaculatus$/) {
       return ('Anopheles quadrimaculatus', 'VBsp', '0003441')
     }
-    when (/^Cx\. tarsalis$/) {
+    when (/^(Cx\.|Culex) tarsalis$/) {
       return ('Culex tarsalis', 'VBsp', '0002687')
     }
-    when (/^Ae\. trivittatus$/) {
+    when (/^(Ae\.|Aedes) trivittatus$/) {
       return ('Aedes trivittatus', 'VBsp', '0001159')
     }
-    when (/^An\. punctipennis$/) {
+    when (/^(An\.|Anopheles) punctipennis$/) {
       return ('Anopheles punctipennis', 'VBsp', '0003439')
     }
-    when (/^An\. walkeri$/) {
+    when (/^(An\.|Anopheles) walkeri$/) {
       return ('Anopheles walkeri', 'VBsp', '0003469')
     }
-    when (/^CPG$/ or /^Cx\. pipiens group$/) {
-      warn "CPG/culex pipiens group not correctly handled yet\n" unless ($cpg_warned++);
+    when (/^CPG$/ or /^(Cx\.|Culex) pipiens group$/) {
+      warn "CPG/culex pipiens group not correctly handled yet\n" unless ($cpg_warned++); #<<< NEED NEW VBsp species complex
       return ('Culex', 'VBsp', '0002482')
     }
-    when (/^Ae\. japonicus$/) {
+    when (/^(Ae\.|Aedes) japonicus$/) {
       return ('?TBD?', 'VBsp', '?TBD?')
     }
-    when (/^Ae\. nigromaculis$/) {
+    when (/^(Ae\.|Aedes) nigromaculis$/) {
       return ('?TBD?', 'VBsp', '?TBD?')
     }
-    when (/^Ae\. sollicitans$/) {
+    when (/^(Ae\.|Aedes) sollicitans$/) {
       return ('?TBD?', 'VBsp', '?TBD?')
     }
-    when (/^Ae\. triseriatus ?$/) {
+    when (/^(Ae\.|Aedes) triseriatus ?$/) { # allows whitespace typo
       return ('?TBD?', 'VBsp', '?TBD?')
     }
-    when (/^An\. earlei$/) {
+    when (/^(An\.|Anopheles) earlei$/) {
       return ('?TBD?', 'VBsp', '?TBD?')
     }
-    when (/^Cq\. perturbans$/) {
+    when (/^(Cq\.|Coquilletidia) perturbans$/) {
       return ('?TBD?', 'VBsp', '?TBD?')
     }
-    when (/^Cs\. inornata$/) {
+    when (/^(Cs\.|Culiseta) [Ii]nornata$/) {
       return ('?TBD?', 'VBsp', '?TBD?')
     }
-    when (/^Cs\. Inornata$/) {
+    when (/^(Cx\.|Culex) erraticus$/) {
       return ('?TBD?', 'VBsp', '?TBD?')
     }
-    when (/^Cx\. erraticus$/) {
+    when (/^(Cx\.|Culex) territans$/) {
       return ('?TBD?', 'VBsp', '?TBD?')
     }
-    when (/^Cx\. territans$/) {
+    when (/^(Or\.|Orthopodomyia) signifera$/) {
       return ('?TBD?', 'VBsp', '?TBD?')
     }
-    when (/^Or\. signifera$/) {
+    when (/^(Ps\.|Psorophora) ciliata$/) {
       return ('?TBD?', 'VBsp', '?TBD?')
     }
-    when (/^Ps\. ciliata$/) {
+    when (/^(Ps\.|Psorophora) columbiae$/) {
       return ('?TBD?', 'VBsp', '?TBD?')
     }
-    when (/^Ps\. columbiae$/) {
+    when (/^(Ps\.|Psorophora) cyanescens$/) {
       return ('?TBD?', 'VBsp', '?TBD?')
     }
-    when (/^Ps. cyanescens$/) {
+    when (/^(Ps\.|Psorophora) ferox$/) {
       return ('?TBD?', 'VBsp', '?TBD?')
     }
-    when (/^Ps. ferox$/) {
+    when (/^(Ps\.|Psorophora) horrida$/) {
       return ('?TBD?', 'VBsp', '?TBD?')
     }
-    when (/^Ps. horrida$/) {
+    when (/^(Ur\.|Uranotaenia) sapphirina$/) {
       return ('?TBD?', 'VBsp', '?TBD?')
     }
-    when (/^Ur. sapphirina$/) {
+    when (/^(Cs\.|Culiseta) impatiens$/) {
       return ('?TBD?', 'VBsp', '?TBD?')
     }
-    when (/^Cs. impatiens$/) {
+    when (/^Cx\. restuans ?$/) {
       return ('?TBD?', 'VBsp', '?TBD?')
     }
-    when (/^Cx. restuans ?$/) {
-      return ('?TBD?', 'VBsp', '?TBD?')
+
+
+    # these are from NJLT data
+    when (/^Aedes \?\?\?$/) {
+      return ('genus Aedes', 'VBsp', '0000253');
     }
+    when (/^Aedes albopictus$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Aedes atropalpus$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Aedes aurifer$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Aedes campestris$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Aedes canadensis$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Aedes cinereus$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Aedes dorsalis$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Aedes dupreei$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Aedes fitchii$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Aedes flavescens$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Aedes hendersoni$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Aedes implicatus$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Aedes punctor$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Aedes riparius$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Aedes spencerii$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Aedes stimulans$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Aedes vexans nipponii$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+
+    when (/^Anopheles \?\?\?$/) {
+      return ('genus Anopheles', 'VBsp', '0000015');
+    }
+    when (/^Anopheles barberi$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Anopheles crucians$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+
+    when (/^Culex \?\?\?$/) {
+      return ('genus Culex', 'VBsp', '0002423');
+    }
+    when (/^Culex salinarius$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Culex $/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+
+    when (/^Culiseta \?\?\?$/) {
+      return ('genus Culiseta', 'VBsp', '0002373');
+    }
+    when (/^Culiseta impatiens$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Culiseta melanura$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Culiseta minnesotae$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Culiseta morsitans$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+
+    when (/^Orthopodomyia \?\?\?$/) {
+      return ('genus Orthopodomyia', 'VBsp', '0001301');
+    }
+    when (/^Orthopodomyia $/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Orthopodomyia alba$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+
+    when (/^Psorophora \?\?\?$/) {
+      return ('genus Psorophora', 'VBsp', '0001304');
+    }
+    when (/^Psorophora discolor$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Psorophora howardii$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+    when (/^Psorophora signipennis$/) {
+      return ('?TBD?', 'VBsp', '?TBD?');
+    }
+
     default {
      die "fatal error: unknown morpho_species_term >$input<\n";
    }
+  }
+}
+
+sub sex_term {
+  my $input = shift;
+  given ($input) {
+    when (/^M$/i) {
+      return ('male', 'PATO', '0000384')
+    }
+    when (/^F$/i) {
+      return ('female', 'PATO', '0000383')
+    }
+    default {
+      die "fatal error: unknown sex_term >$input<\n";
+    }
   }
 }
 
