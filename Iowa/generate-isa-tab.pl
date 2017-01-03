@@ -85,6 +85,8 @@ my %collection_name; # $collection_name{COUNTY}{SITENAME}{TRAPTYPE}{DATE} = "Cou
 # loop over input files
 #
 foreach my $raw_data_file (@raw_data_files) {
+  # some dates are missing the year - so we have to use the year from the filename sometimes!
+  my ($year_from_filename) = $raw_data_file =~ /(20\d\d)/;
   my $raw_data_aoh = load_tsv_file($raw_data_file);
   foreach my $row (@$raw_data_aoh) {
     # figure out if we have 'location' or 'county','site' headings
@@ -113,10 +115,12 @@ foreach my $raw_data_file (@raw_data_files) {
 
     # clean up the dates
     my $date = $row->{Date} || $row->{Collected};
+    my $orig_date = $date;
     die unless $date;
 
-    if ($date =~ /,|and/ || ($date =~ m{^(\d+)/(\d+)-(\d+)/(\d+)$} && ($1==$3 || $1+1==$3))) {
-      warn "skipping data (for now) with yearless date '$date' in $raw_data_file\n";
+#    if ($date =~ /,|and/ || ($date =~ m{^(\d+)/(\d+)-(\d+)/(\d+)$} && ($1==$3 || $1+1==$3))) {
+    if (0 && $date =~ /,|and/) {
+      warn "skipping data (for now) with comma-separated date '$date' in $raw_data_file\n";
 
       # TO DO
       # can get year from filename of course... hacky though!
@@ -127,14 +131,14 @@ foreach my $raw_data_file (@raw_data_files) {
     }
 
     # incoming dates are in the format 8/22/2013 (in both types of file)
-
+#warn "test '$date'\n";
     # edge case date range in the day of month...
     if ($date =~ m{^(\d+)/(\d+)-(\d+)/(\d{4})$}) {
       my ($month, $day1, $day2, $year) = ($1,$2,$3,$4);
       my $date1 = fix_date_to_iso("$month/$day1/$year");
       my $date2 = fix_date_to_iso("$month/$day2/$year");
       $date = "$date1/$date2"; # ISA-Tab Chado loader friendly date range
-    } elsif ($date =~ m{^(\d+)/(\d+)-(\d+)/(\d+)/(\d{2})$}) { # a range straddling a month boundary
+    } elsif ($date =~ m{^(\d+)/(\d+)-(\d+)/(\d+)/(\d{2})$}) { # a range straddling a month boundary with a two-digit year
       my ($month1, $day1, $month2, $day2, $year) = ($1,$2,$3,$4,$5);
       my $date1 = fix_date_to_iso("$month1/$day1/20$year");
       my $date2 = fix_date_to_iso("$month2/$day2/20$year");
@@ -144,10 +148,23 @@ foreach my $raw_data_file (@raw_data_files) {
       die "bad year" if ($year > 20);
       # two digit year edge case
       $date = fix_date_to_iso("$month/$day/20$year")
+    } elsif ($date =~ m{^(\d+)/(\d+)(?:-|,\s*|\s+and\s+)(?:\d+/\d+(?:-|,\s*))?(\d+)/(?:\d+-)?(\d+)\s*$} && ($1==$3 || $1+1==$3)) {
+      # yearless range - if there are three dates, ignore the middle one!
+      my $date1 = fix_date_to_iso("$1/$2/$year_from_filename");
+      my $date2 = fix_date_to_iso("$3/$4/$year_from_filename");
+      $date = "$date1/$date2"; # ISA-Tab Chado loader friendly date range
+    } elsif ($date =~ m{^(\d+)/(\d+),\s?(?:\d+,\s?)*?(\d+)$}) {
+      # month/date,date,date,date -> just take first and last dates
+      my $date1 = fix_date_to_iso("$1/$2/$year_from_filename");
+      my $date2 = fix_date_to_iso("$1/$3/$year_from_filename");
+      $date = "$date1/$date2";
     } else {
       $date = fix_date_to_iso($date);
     }
 
+    if ($orig_date =~ /,|-|and/) {
+      warn "$orig_date ---> $date\n";
+    }
 
     # (for CDC/gravid)
     my $trap_type = $row->{Trap} || "NJLT";
