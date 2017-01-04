@@ -31,6 +31,10 @@ my (@raw_data_files) = @ARGV;
 my %tsv_parser_defaults = (binary => 1, eol => $/, sep_char => "\t");
 my %csv_parser_defaults = (binary => 1, eol => $/, sep_char => ",");
 
+# just some counters to avoid a gazillion warnings about TO DO items
+my $cpg_warned = 0;
+my $zero_warned = 0;
+
 
 # get the locations
 my %site2location; # raw_site_name => { name => 'Cedar Falls', county => 'Black Hawk', latitidue => 123.456, longitude => 34.56 }
@@ -80,6 +84,10 @@ my $collection_counter = 0;
 # then use a four (!) level hash to remember which Assay Name to use for each combination of Village, Date and Location
 my %collection_name; # $collection_name{COUNTY}{SITENAME}{TRAPTYPE}{DATE} = "County_Site_TrapType_Date_C001"
 
+# sample_name
+# for each location/species
+my $sample_counter = 0;
+my %sample_name; # $sample_name{COUNTY}{SPECIES} = "County_Site_Species_S00001"
 
 #
 # loop over input files
@@ -177,49 +185,80 @@ foreach my $raw_data_file (@raw_data_files) {
     # and also ask Dan about ZEROES for the CDC data
     #
 
-    my %species_counts;
-    # create a hash: sanitised_species_name => { count => 123, sex => mf,
-    #                                            term_source_ref => 'VBsp', term_accession_number => '0001234',
-    #                                            WNV => 01u SLE => 01u, WEE => 01u, LACV => 01u }
-    # mf means male, female
+    my @species_data;
+    # array of hashes = [ { count => 123,
+    #                         sex => 'female', sex_term_source_ref => 'PATO', sex_term_accession_number => '0000383',
+    #                         species => 'Anopheles blahblah',
+    #                         species_term_source_ref => 'VBsp', species_term_accession_number => '0001234',
+    #                         WNV => 01u SLE => 01u, WEE => 01u, LACV => 01u,
+    #                       }, ... ]
     # where 01u means 0, 1 or undef
     # and the viral assay counts are optional (not available for CDC)
 
     if ($row->{Species}) {
       my ($full_species_name, $species_tsr, $species_tan) = species_term($row->{Species});
-      $species_counts{$full_species_name} = {
-					     count => $row->{'Pool Size'},
-					     sex => 'female',
-					     term_source_ref => $species_tsr,
-					     term_accession_number => $species_tan,
-					     WNV => sanitise_virus_result($row->{WNV}),
-					     SLE => sanitise_virus_result($row->{SLE}),
-					     WEE => sanitise_virus_result($row->{WEE}),
-					     LACV => sanitise_virus_result($row->{LACV}),
-					    };
+      my ($sex, $sex_tsr, $sex_tan) = sex_term('F');
+      push @species_data, {
+			   count => $row->{'Pool Size'},
+			   species => $full_species_name,
+			   species_term_source_ref => $species_tsr,
+			   species_term_accession_number => $species_tan,
+			   sex => $sex,
+			   sex_term_source_ref => $sex_tsr,
+			   sex_term_accession_number => $sex_tan,
+			   WNV => sanitise_virus_result($row->{WNV}),
+			   SLE => sanitise_virus_result($row->{SLE}),
+			   WEE => sanitise_virus_result($row->{WEE}),
+			   LACV => sanitise_virus_result($row->{LACV}),
+			   collection_protocol_ref => 'COLLECT_CDC',
+			  };
     } elsif ($row->{location}) {
       # all the species count headings in the NJLT files end in M or F (male/female)
       foreach my $heading (grep /\s+[MF]$/, keys %$row) {
-	my ($species_heading, $mf) = $heading =~ /^(.+?)\s+([MF])/;
-	my ($full_species_name, $species_tsr, $species_tan) = species_term($species_heading);
-	my ($sex, $sex_tsr, $sex_tan) = sex_term($mf);
 
+	my $count = $row->{$heading};
+	if ($count > 0) {
+	  my ($species, $mf) = $heading =~ /^(.+?)\s+([MF])/;
+	  my ($full_species_name, $species_tsr, $species_tan) = species_term($species);
+	  my ($sex, $sex_tsr, $sex_tan) = sex_term($mf);
 
-	#warn "do something with $heading -> $row->{$heading}\n";
-	# TO DO - probably skip zeroes for the first pass at ISA-Tab/Chado-loading
-	# then deal with zeroes for both CDC and NJLT data properly
-
+	  push @species_data, {
+			       count => $row->{$heading},
+			       sex => 'female',
+			       sex_term_source_ref => $sex_tsr,
+			       sex_term_accession_number => $sex_tan,
+			       species => $full_species_name,
+			       species_term_source_ref => $species_tsr,
+			       species_term_accession_number => $species_tan,
+			       WNV => sanitise_virus_result($row->{WNV}),
+			       SLE => sanitise_virus_result($row->{SLE}),
+			       WEE => sanitise_virus_result($row->{WEE}),
+			       LACV => sanitise_virus_result($row->{LACV}),
+			       collection_protocol_ref => 'COLLECT_NJLT',
+			      };
+	} else {
+	  warn "need to handle zero counts properly - ignored at the moment!\n" unless ($zero_warned++);
+	  # TO DO - probably skip zeroes for the first pass at ISA-Tab/Chado-loading
+	  # then deal with zeroes for both CDC and NJLT data properly
+	}
       }
     } else {
       die "unexpected parsing error";
     }
 
-    # do s_sample row
-    # my $sample_name = whitespace_to_underscore(sprintf "%s %04d", $row);
-
-    # push @s_samples, $raw_data_file, $sample_name, 'TBC?', 999;
-
-
+    foreach my $data (@species_data) {
+      # do s_sample row
+      my $sample_name = $sample_name{$location->{county}}{$data->{species}} //= whitespace_to_underscore(sprintf "%s %s S%07d", $location->{county}, $data->{species}, ++$sample_counter);
+      # TO DO: description - currently empty
+      # maybe special case for zeroes
+      push @s_samples,[
+		       $raw_data_file, $sample_name, '',
+		       'pool', 'EFO', '0000663', # Material Type
+		       $data->{sex}, $data->{sex_term_source_ref}, $data->{sex_term_accession_number}, # Sex
+		       'adult', 'IDOMAL', '0000655', # Developmental Stage
+		       $data->{count}  # Sample size
+		      ];
+    }
 
   #  print "OK for $location->{name} from $location->{county}\n";
 
@@ -233,9 +272,6 @@ write_table("$outdir/a_collection.txt", \@a_collection);
 
 
 ############# lookup subs ################
-
-
-my $cpg_warned;
 
 sub species_term {
   my $input = shift;
