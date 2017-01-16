@@ -61,7 +61,7 @@ foreach my $row_ref (@$lines_aoh) {
       # printf prints a formatted 'template' string
       # the variable values follow it
       if ($length > 0) {
-	printf "%s.%s\t%s:%d\tmicrosatellite %s, allele %s, length %s\tsimple_sequence_length_variation\tSO\t0000207\t%s\t\t\t%s\tUO\t0000244\n",
+	printf "%s.%s\t%s:%d\tmicrosatellite %s, allele %s, length %s\tsimple_sequence_length_variation\tSO\t0000207\t%s\t\t\t%s\t\t\n",
 	  $sample_id, $locus,           # Assay Name
 	    $allele, $length,           # Genotype Name
 	      $locus, $a_or_b, $length, # Description
