@@ -249,15 +249,36 @@ foreach my $raw_data_file (@raw_data_files) {
     foreach my $data (@species_data) {
       # do s_sample row
       my $sample_name = $sample_name{$location->{county}}{$data->{species}} //= whitespace_to_underscore(sprintf "%s %s S%07d", $location->{county}, $data->{species}, ++$sample_counter);
-      # TO DO: description - currently empty
-      # maybe special case for zeroes
-      push @s_samples,[
-		       $raw_data_file, $sample_name, '',
-		       'pool', 'EFO', '0000663', # Material Type
-		       $data->{sex}, $data->{sex_term_source_ref}, $data->{sex_term_accession_number}, # Sex
-		       'adult', 'IDOMAL', '0000655', # Developmental Stage
-		       $data->{count}  # Sample size
-		      ];
+
+      push @s_samples, [
+			$raw_data_file,
+			$sample_name,
+			'', # TO DO: description - currently empty, maybe special case for zeroes
+			'pool', 'EFO', '0000663', # Material Type
+			$data->{sex}, $data->{sex_term_source_ref}, $data->{sex_term_accession_number}, # Sex
+			'adult', 'IDOMAL', '0000655', # Developmental Stage
+			$data->{count}  # Sample size
+		       ];
+
+      push @a_species, [
+			$sample_name,
+			"$sample_name.SPECIES",
+			'', # TO DO? description
+			'SPECIES',
+			$data->{species}, $data->{species_term_source_ref}, $data->{species_term_accession_number}
+		       ];
+
+      push @a_collection, [
+			   $sample_name,
+			   $a_collection_assay_name,
+			   '', # description TO DO
+			   $data->{collection_protocol_ref},
+			   $date,
+			   $orig_date,
+			   'State of Iowa', 'GAZ', '00004438',
+			   $location->{latitude}, $location->{longitude},
+			  ];
+
     }
 
   #  print "OK for $location->{name} from $location->{county}\n";
@@ -302,58 +323,58 @@ sub species_term {
       return ('Culex', 'VBsp', '0002482')
     }
     when (/^(Ae\.|Aedes) japonicus$/) {
-      return ('?TBD?', 'VBsp', '?TBD?')
+      return ('Aedes japonicus', 'VBsp', '?TBD?')
     }
     when (/^(Ae\.|Aedes) nigromaculis$/) {
-      return ('?TBD?', 'VBsp', '?TBD?')
+      return ('Aedes nigromaculis', 'VBsp', '?TBD?')
     }
     when (/^(Ae\.|Aedes) sollicitans$/) {
-      return ('?TBD?', 'VBsp', '?TBD?')
+      return ('Aedes sollicitans', 'VBsp', '?TBD?')
     }
     when (/^(Ae\.|Aedes) triseriatus ?$/) { # allows whitespace typo
-      return ('?TBD?', 'VBsp', '?TBD?')
+      return ('Aedes triseriatus', 'VBsp', '?TBD?')
     }
     when (/^(An\.|Anopheles) earlei$/) {
-      return ('?TBD?', 'VBsp', '?TBD?')
+      return ('Anopheles earlei', 'VBsp', '?TBD?')
     }
     when (/^(Cq\.|Coquilletidia) perturbans$/) {
-      return ('?TBD?', 'VBsp', '?TBD?')
+      return ('Coquilletidia perturbans', 'VBsp', '?TBD?')
     }
     when (/^(Cs\.|Culiseta) [Ii]nornata$/) {
-      return ('?TBD?', 'VBsp', '?TBD?')
+      return ('Culiseta inornata', 'VBsp', '?TBD?')
     }
     when (/^(Cx\.|Culex) erraticus$/) {
-      return ('?TBD?', 'VBsp', '?TBD?')
+      return ('Culex erraticus', 'VBsp', '?TBD?')
     }
     when (/^(Cx\.|Culex) territans$/) {
-      return ('?TBD?', 'VBsp', '?TBD?')
+      return ('Culex territans', 'VBsp', '?TBD?')
     }
     when (/^(Or\.|Orthopodomyia) signifera$/) {
-      return ('?TBD?', 'VBsp', '?TBD?')
+      return ('Orthopodomyia signifera', 'VBsp', '?TBD?')
     }
     when (/^(Ps\.|Psorophora) ciliata$/) {
-      return ('?TBD?', 'VBsp', '?TBD?')
+      return ('Psorophora ciliata', 'VBsp', '?TBD?')
     }
     when (/^(Ps\.|Psorophora) columbiae$/) {
-      return ('?TBD?', 'VBsp', '?TBD?')
+      return ('Psorophora columbiae', 'VBsp', '?TBD?')
     }
     when (/^(Ps\.|Psorophora) cyanescens$/) {
-      return ('?TBD?', 'VBsp', '?TBD?')
+      return ('Psorophora cyanescens', 'VBsp', '?TBD?')
     }
     when (/^(Ps\.|Psorophora) ferox$/) {
-      return ('?TBD?', 'VBsp', '?TBD?')
+      return ('Psorophora ferox', 'VBsp', '?TBD?')
     }
     when (/^(Ps\.|Psorophora) horrida$/) {
-      return ('?TBD?', 'VBsp', '?TBD?')
+      return ('Psorophora horrida', 'VBsp', '?TBD?')
     }
     when (/^(Ur\.|Uranotaenia) sapphirina$/) {
-      return ('?TBD?', 'VBsp', '?TBD?')
+      return ('Uranotaenia sapphirina', 'VBsp', '?TBD?')
     }
     when (/^(Cs\.|Culiseta) impatiens$/) {
-      return ('?TBD?', 'VBsp', '?TBD?')
+      return ('Culiseta impatiens', 'VBsp', '?TBD?')
     }
     when (/^Cx\. restuans ?$/) {
-      return ('?TBD?', 'VBsp', '?TBD?')
+      return ('Culex restuans', 'VBsp', '?TBD?')
     }
 
 
@@ -362,114 +383,108 @@ sub species_term {
       return ('genus Aedes', 'VBsp', '0000253');
     }
     when (/^Aedes albopictus$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Aedes albopictus', 'VBsp', '?TBD?');
     }
     when (/^Aedes atropalpus$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Aedes atropalpus', 'VBsp', '?TBD?');
     }
     when (/^Aedes aurifer$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Aedes aurifer', 'VBsp', '?TBD?');
     }
     when (/^Aedes campestris$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Aedes campestris', 'VBsp', '?TBD?');
     }
     when (/^Aedes canadensis$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Aedes canadensis', 'VBsp', '?TBD?');
     }
     when (/^Aedes cinereus$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Aedes cinereus', 'VBsp', '?TBD?');
     }
     when (/^Aedes dorsalis$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Aedes dorsalis', 'VBsp', '?TBD?');
     }
     when (/^Aedes dupreei$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Aedes dupreei', 'VBsp', '?TBD?');
     }
     when (/^Aedes fitchii$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Aedes fitchii', 'VBsp', '?TBD?');
     }
     when (/^Aedes flavescens$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Aedes flavescens', 'VBsp', '?TBD?');
     }
     when (/^Aedes hendersoni$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Aedes hendersoni', 'VBsp', '?TBD?');
     }
     when (/^Aedes implicatus$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Aedes implicatus', 'VBsp', '?TBD?');
     }
     when (/^Aedes punctor$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Aedes punctor', 'VBsp', '?TBD?');
     }
     when (/^Aedes riparius$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Aedes riparius', 'VBsp', '?TBD?');
     }
     when (/^Aedes spencerii$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Aedes spencerii', 'VBsp', '?TBD?');
     }
     when (/^Aedes stimulans$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Aedes stimulans', 'VBsp', '?TBD?');
     }
     when (/^Aedes vexans nipponii$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Aedes vexans nipponii', 'VBsp', '?TBD?');
     }
 
     when (/^Anopheles \?\?\?$/) {
       return ('genus Anopheles', 'VBsp', '0000015');
     }
     when (/^Anopheles barberi$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Anopheles barberi', 'VBsp', '?TBD?');
     }
     when (/^Anopheles crucians$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Anopheles crucians', 'VBsp', '?TBD?');
     }
 
     when (/^Culex \?\?\?$/) {
       return ('genus Culex', 'VBsp', '0002423');
     }
     when (/^Culex salinarius$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
-    }
-    when (/^Culex $/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Culex salinarius', 'VBsp', '?TBD?');
     }
 
     when (/^Culiseta \?\?\?$/) {
       return ('genus Culiseta', 'VBsp', '0002373');
     }
     when (/^Culiseta impatiens$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Culiseta impatiens', 'VBsp', '?TBD?');
     }
     when (/^Culiseta melanura$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Culiseta melanura', 'VBsp', '?TBD?');
     }
     when (/^Culiseta minnesotae$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Culiseta minnesotae', 'VBsp', '?TBD?');
     }
     when (/^Culiseta morsitans$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Culiseta morsitans', 'VBsp', '?TBD?');
     }
 
     when (/^Orthopodomyia \?\?\?$/) {
       return ('genus Orthopodomyia', 'VBsp', '0001301');
     }
-    when (/^Orthopodomyia $/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
-    }
     when (/^Orthopodomyia alba$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Orthopodomyia alba', 'VBsp', '?TBD?');
     }
 
     when (/^Psorophora \?\?\?$/) {
       return ('genus Psorophora', 'VBsp', '0001304');
     }
     when (/^Psorophora discolor$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Psorophora discolor', 'VBsp', '?TBD?');
     }
     when (/^Psorophora howardii$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Psorophora howardii', 'VBsp', '?TBD?');
     }
     when (/^Psorophora signipennis$/) {
-      return ('?TBD?', 'VBsp', '?TBD?');
+      return ('Psorophora signipennis', 'VBsp', '?TBD?');
     }
 
     default {
