@@ -44,7 +44,7 @@ my $lines_aoh = Text::CSV::Hashify->new( {
 
 
 # print the headers - separated by \t
-print "Assay Name\tGenotype Name\tDescription\ttype\tTerm Source Ref\tTerm Accession Number\tCharacteristics [microsatellite (SO:0000289)]\tTerm Source Ref\tTerm Accession Number\tCharacteristics [length (PATO:0000122)]\tTerm Source Ref\tTerm Accession Number\n";
+print "Assay Name\tGenotype Name\tDescription\tType\tTerm Source Ref\tTerm Accession Number\tCharacteristics [microsatellite (SO:0000289)]\tTerm Source Ref\tTerm Accession Number\tCharacteristics [length (PATO:0000122)]\tTerm Source Ref\tTerm Accession Number\n";
 
 # this loop processes every line in the file
 foreach my $row_ref (@$lines_aoh) {
@@ -61,17 +61,12 @@ foreach my $row_ref (@$lines_aoh) {
       # printf prints a formatted 'template' string
       # the variable values follow it
       if ($length > 0) {
-<<<<<<< HEAD
-	printf "%s.%s\t%s:$length\tmicrosatellite %s, length %s\tsimple_sequence_length_variation\tSO\t0000207\t%s\t\t\t%s\t\t\n",
-	  $sample_id, $locus, $allele, $sample_id, $length, $allele, $length;
-=======
-	printf "%s.%s\t%s:%d\tmicrosatellite %s, allele %s, length %s\tsimple_sequence_length_variation\tSO\t0000207\t%s\t\t\t%s\tUO\t0000244\n",
+	printf "%s.%s\t%s:%d\tmicrosatellite %s, allele %s, length %s\tsimple_sequence_length_variation\tSO\t0000207\t%s\t\t\t%s\t\t\n",
 	  $sample_id, $locus,           # Assay Name
 	    $allele, $length,           # Genotype Name
 	      $locus, $a_or_b, $length, # Description
-		$allele,                # Characteristics [microsatellite (SO:0000289)]
+		$locus,                # Characteristics [microsatellite (SO:0000289)]
 		  $length;              # Characteristics [length (PATO:0000122)]
->>>>>>> 54a20089a95363d878bd08d77ab3cddc4046dd60
       }
     }
   } else {
