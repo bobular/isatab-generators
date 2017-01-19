@@ -431,7 +431,7 @@ sub species_term {
       return ('Aedes stimulans', 'VBsp', '0001146');
     }
     when (/^Aedes vexans nipponii$/) {
-      return ('Aedes vexans nipponii', 'VBsp', '?TBD?');
+      return ('Aedes vexans nipponii', 'VBsp', '0000374');
     }
 
     when (/^Anopheles \?\?\?$/) {
