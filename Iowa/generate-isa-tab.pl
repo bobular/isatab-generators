@@ -78,6 +78,16 @@ my @a_species = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 
 
 my @a_collection = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Date', 'Comment [Raw date]', 'Characteristics [Collection site (VBcv:0000831)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [Collection site latitude (VBcv:0000817)]', 'Characteristics [Collection site longitude (VBcv:0000816)]' ] );
 
+my @a_virus = ( [
+		 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Raw Data File'
+		] );
+
+my @p_virus = ( [
+		 'Assay Name', 'Phenotype Name',
+		 'Observable', 'Term Source Ref', 'Term Accession Number',
+		 'Attribute', 'Term Source Ref', 'Term Accession Number',
+		 'Value', 'Term Source Ref', 'Term Accession Number'
+		] );
 
 # serial number counter used in a_collection Assay Name
 my $collection_counter = 0;
@@ -210,7 +220,7 @@ foreach my $raw_data_file (@raw_data_files) {
 			   SLE => sanitise_virus_result($row->{SLE}),
 			   WEE => sanitise_virus_result($row->{WEE}),
 			   LACV => sanitise_virus_result($row->{LACV}),
-			   collection_protocol_ref => 'COLLECT_CDC',
+			   collection_protocol_ref => ($trap_type =~ /gravid/i ? 'COLLECT_GRAVID' : 'COLLECT_CDC'),
 			  };
     } elsif ($row->{location}) {
       # all the species count headings in the NJLT files end in M or F (male/female)
@@ -278,7 +288,24 @@ foreach my $raw_data_file (@raw_data_files) {
 			   'State of Iowa', 'GAZ', '00004438',
 			   $location->{latitude}, $location->{longitude},
 			  ];
-
+      foreach my $virus (qw/WNV SLE WEE LACV/) {
+	if (defined $data->{$virus}) { # if a test has been done
+	  push @a_virus, [
+			  $sample_name,
+			  "$sample_name.VIRUS_$virus",
+			  '', # description TO DO
+			  "VIRUS_$virus",
+			  'p_virus.txt',
+			 ];
+	  push @p_virus, [
+			  "$sample_name.VIRUS_$virus",
+			  ($data->{$virus} ? "$virus infected" : "$virus infection not detected"),
+			  'arthropod infection status', 'VMSO', '0000009',
+			  virus_term($virus),
+			  present_absent_term($data->{$virus})
+			 ];
+	}
+      }
     }
 
   #  print "OK for $location->{name} from $location->{county}\n";
@@ -290,6 +317,8 @@ foreach my $raw_data_file (@raw_data_files) {
 write_table("$outdir/s_samples.txt", \@s_samples);
 write_table("$outdir/a_species.txt", \@a_species);
 write_table("$outdir/a_collection.txt", \@a_collection);
+write_table("$outdir/a_virus.txt", \@a_virus);
+write_table("$outdir/p_virus.txt", \@p_virus);
 
 
 ############# lookup subs ################
@@ -508,6 +537,32 @@ sub sex_term {
   }
 }
 
+sub virus_term {
+  my $input = shift;
+  given ($input) {
+    when (/^WNV$/i) {
+      return (qw/WNV	VSMO	0000535/)
+    }
+    when (/^SLE$/i) {
+      return (qw/SLE	VSMO	0000882/)
+    }
+    when (/^WEE$/i) {
+      return (qw/WEE	VSMO	0001206/)
+    }
+    when (/^LACV/i) {
+      return (qw/LACV	VSMO	0001227/)
+    }
+    default {
+      die "fatal error: unknown virus_term >$input<\n";
+    }
+  }
+}
+
+# input for this is 1 or 0
+sub present_absent_term {
+  my $input = shift;
+  return $input ? (qw/present PATO 0000467/) : (qw/absent PATO 0000462/);
+}
 
 #############
 
