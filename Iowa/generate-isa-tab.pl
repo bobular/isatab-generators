@@ -92,12 +92,11 @@ my @p_virus = ( [
 # serial number counter used in a_collection Assay Name
 my $collection_counter = 0;
 # then use a four (!) level hash to remember which Assay Name to use for each combination of Village, Date and Location
-my %collection_name; # $collection_name{COUNTY}{SITENAME}{TRAPTYPE}{DATE} = "County_Site_TrapType_Date_C001"
+my %collection_name; # $collection_name{COUNTY}{SITENAME}{TRAPTYPE}{SUBMITTED_DATE_RANGE} = "County_Site_TrapType_C001"
 
-# sample_name
+# sample counter
 # for each location/species
-my $sample_counter = 0;
-my %sample_name; # $sample_name{COUNTY}{SPECIES} = "County_Site_Species_S00001"
+my %sample_counter; # $sample_counter{COUNTY}{SPECIES} = "County_Site_Species_S00001"
 
 #
 # loop over input files
@@ -188,7 +187,7 @@ foreach my $raw_data_file (@raw_data_files) {
     my $trap_type = $row->{Trap} || "NJLT";
 
     # figure out the collection assay name
-    my $a_collection_assay_name = $collection_name{$location->{county}}{$location->{name}}{$trap_type}{$date} //= whitespace_to_underscore(sprintf "%s %s %s %s C%04d", $location->{county}, $location->{name}, $trap_type, $date, ++$collection_counter);
+    my $a_collection_assay_name = $collection_name{$location->{county}}{$location->{name}}{$trap_type}{$orig_date} //= whitespace_to_underscore(sprintf "%s %s %s C%04d", $location->{county}, $location->{name}, $trap_type, ++$collection_counter);
 
     # NEED TO FIGURE OUT HOW TO DEAL WITH CDC (all in one row) vs NJLT (one species per row) 
     #
@@ -258,7 +257,8 @@ foreach my $raw_data_file (@raw_data_files) {
 
     foreach my $data (@species_data) {
       # do s_sample row
-      my $sample_name = $sample_name{$location->{county}}{$data->{species}} //= whitespace_to_underscore(sprintf "%s %s S%07d", $location->{county}, $data->{species}, ++$sample_counter);
+      my $sample_name = whitespace_to_underscore(sprintf "%s %s S%07d", $location->{county}, $data->{species}, ++$sample_counter{$location->{county}}{$data->{species}});
+
 
       push @s_samples, [
 			$raw_data_file,
@@ -300,7 +300,7 @@ foreach my $raw_data_file (@raw_data_files) {
 	  push @p_virus, [
 			  "$sample_name.VIRUS_$virus",
 			  ($data->{$virus} ? "$virus infected" : "$virus infection not detected"),
-			  'arthropod infection status', 'VMSO', '0000009',
+			  'arthropod infection status', 'VSMO', '0000009',
 			  virus_term($virus),
 			  present_absent_term($data->{$virus})
 			 ];
