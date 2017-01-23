@@ -366,8 +366,8 @@ sub species_term {
     when (/^(An\.|Anopheles) earlei$/) {
       return ('Anopheles earlei', 'VBsp', '0000079')
     }
-    when (/^(Cq\.|Coquilletidia) perturbans$/) {
-      return ('Coquilletidia perturbans', 'VBsp', '40002347')
+    when (/^(Cq\.|Coquillett?idia) perturbans$/) {
+      return ('Coquillettidia perturbans', 'VBsp', '0002347')
     }
     when (/^(Cs\.|Culiseta) [Ii]nornata$/) {
       return ('Culiseta inornata', 'VBsp', '0002409')
