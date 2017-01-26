@@ -99,14 +99,15 @@ foreach my $filename (glob "$indir/*.{txt,tsv}") {
 #
 #
 
-my @s_samples = ( ['Source Name', 'Sample Name', 'Description','Material Type', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sex (EFO:0000695)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [developmental stage (EFO:0000399)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [age (EFO:0000246)]', 'Unit', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sample size (VBcv:0000983)]' ] );
+my @s_samples = ( ['Source Name', 'Sample Name', 'Description','Material Type', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sex (EFO:0000695)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [developmental stage (EFO:0000399)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [age (EFO:0000246)]', 'Unit', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sample size (VBcv:0000983)]','Characteristics [combined feeding and gonotrophic status of insect (VSMO:0002038)]','Term Source Ref', 'Term Accession Number' ] );
+
 
 my @a_species = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Characteristics [species assay result (VBcv:0000961)]', 'Term Source Ref', 'Term Accession Number' ] );
 
 my @a_collection = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Performer', 'Date', 'Characteristics [Collection site (VBcv:0000831)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [Collection site latitude (VBcv:0000817)]', 'Characteristics [Collection site longitude (VBcv:0000816)]', 'Comment [collection site coordinates]', 'Characteristics [Collection site village (VBcv:0000829)]', 'Characteristics [Collection site country (VBcv:0000701)]' ] ); # 'Characteristics [Collection site location (VBcv:0000698)]', 'Characteristics [Collection site village (VBcv:0000829)]', 'Characteristics [Collection site locality (VBcv:0000697)]', 'Characteristics [Collection site suburb (VBcv:0000845)]', 'Characteristics [Collection site city (VBcv:0000844)]', 'Characteristics [Collection site county (VBcv:0000828)]', 'Characteristics [Collection site district (VBcv:0000699)]', 'Characteristics [Collection site province (VBcv:0000700)]', 'Characteristics [Collection site country (VBcv:0000701)]' ] );
 
-my @a_blood_species = ( [ 'Sample Name', 'Assay Name', 'Protocol REF', 'Comment [note]', 'Characteristics [sample size (VBcv:0000983)]', 'Raw Data File' ] );
-my @p_blood_species = ( [ 'Assay Name', 'Phenotype Name', 'Observable', 'Term Source Ref', 'Term Accession Number', 'Attribute', 'Term Source Ref', 'Term Accession Number', 'Value', 'Unit', 'Term Source Ref', 'Term Accession Number', 'Characteristics [organism (OBI:0100026)]' ] );
+my @a_blood_species = ( [ 'Sample Name', 'Assay Name', 'Protocol REF', 'Raw Data File' ] );
+my @p_blood_species = ( [ 'Assay Name', 'Phenotype Name', 'Observable', 'Term Source Ref', 'Term Accession Number', 'Attribute', 'Term Source Ref', 'Term Accession Number', 'Value', 'Term Source Ref', 'Term Accession Number' ] );
 
 
 
@@ -211,12 +212,31 @@ foreach my $row (@combined_input_rows) {
 
       #push a reference to an array of row data into s_samples
 
-      push @s_samples, [ '2016-indian-icemr', $sample_name, '',  'pool', 'EFO', '0000663', 'female', 'PATO', '0000383', 'adult', 'IDOMAL', '0000655', $num_mossies ];
+      my @feeding_status = $bm_type eq 'Unfed' ? ('unfed female insect', 'VSMO', '0000210') : ('fed female insect', 'VSMO', '0000218');
+
+      push @s_samples, [ '2016-indian-icemr', $sample_name, '',  'pool', 'EFO', '0000663', 'female', 'PATO', '0000383', 'adult', 'IDOMAL', '0000655', $num_mossies, @feeding_status ];
+
+
       push @a_species, [ $sample_name, "$sample_name.SPECIES", '', 'SPECIES', morpho_species_term($row->{Species}) ];
       push @a_species, [ $sample_name, "$sample_name.$species_protocol_ref" , '', $species_protocol_ref, pcr_species_term($subspecies) ];
       push @a_collection, [ $sample_name, $a_collection_assay_name, '', collection_protocol_ref($row->{'Type of Dwelling'}), '', $row->{Month}, 'India', 'GAZ', '00002839', $lat_decimal, $long_decimal, 'IA', $row->{Village}, 'India' ];
-      push @a_blood_species, [ $sample_name, "$sample_name.PCR_BLOOD", 'PCR_BLOOD', '', $row->{'Total number of mosquitoes'}, 'p_blood_species.txt' ];
-      push @p_blood_species, [ "$sample_name.PCR_BLOOD", "Human Bloodmeal Index: TO DO", 'identification of source of blood meal in arthropod', 'VSMO', '0000174',];
+
+      if ($bm_type ne 'Unfed') {
+	# always two assays on fed insects
+	push @a_blood_species, [ $sample_name, "$sample_name.BM_BOVINE", 'BM_BOVINE', 'p_blood_species.txt' ];
+	push @a_blood_species, [ $sample_name, "$sample_name.BM_HUMAN", 'BM_HUMAN', 'p_blood_species.txt' ];
+
+	if ($bm_type eq 'Bovine') {
+	  push @p_blood_species, [ "$sample_name.BM_BOVINE", 'bovine blood meal', 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'PRESENT', 'PATO', '0000467' ];
+	  push @p_blood_species, [ "$sample_name.BM_HUMAN", 'human blood meal', 'blood meal', 'VBcv', '00001003', 'human', 'VBsp', '0001357', 'ABSENT', 'PATO', '0000462' ];
+	} elsif ($bm_type eq 'Human') {
+	   push @p_blood_species, [ "$sample_name.BM_BOVINE", 'bovine blood meal', 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_HUMAN", 'human blood meal', 'blood meal', 'VBcv', '00001003', 'human', 'VBsp', '0001357', 'PRESENT', 'PATO', '0000467' ];
+	} elsif ($bm_type eq 'B+H') {
+	  push @p_blood_species, [ "$sample_name.BM_BOVINE", 'bovine blood meal', 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'PRESENT', 'PATO', '0000467' ];
+	  push @p_blood_species, [ "$sample_name.BM_HUMAN", 'human blood meal', 'blood meal', 'VBcv', '00001003', 'human', 'VBsp', '0001357', 'PRESENT', 'PATO', '0000467' ]
+	}
+      }
       #	print STDOUT "created '$sample_name' from $row->{Village} that dined on $bm_type\n";
     }
 
@@ -242,7 +262,7 @@ foreach my $row (@combined_input_rows) {
       my $sample_name = sprintf "%s %s %04d", $row->{Species}, $subspecies, ++$sample_number{$row->{Species}}{$subspecies};
 
       # push rows onto s_samples, a_species and a_collection
-      push @s_samples, [ '2016-indian-icemr', $sample_name, 'Zero sample warning TO DO', 'pool', 'EFO', '0000663', 'female', 'PATO', '0000383', 'adult', 'IDOMAL', '0000655', '0' ];
+      push @s_samples, [ '2016-indian-icemr', $sample_name, 'Zero sample warning TO DO', 'pool', 'EFO', '0000663', 'female', 'PATO', '0000383', 'adult', 'IDOMAL', '0000655', '0', '', '', '' ];
       push @a_species, [ $sample_name, "$sample_name.SPECIES", '', 'SPECIES', morpho_species_term($row->{Species}) ];
       push @a_species, [ $sample_name, "$sample_name.$species_protocol_ref" , '', $species_protocol_ref, pcr_species_term($subspecies) ];
       push @a_collection, [ $sample_name, $a_collection_assay_name, '', collection_protocol_ref($row->{'Type of Dwelling'}), '', $row->{Month}, 'India', 'GAZ', '00002839', $lat_decimal, $long_decimal, 'IA', $row->{Village}, 'India' ];
@@ -277,8 +297,8 @@ write_table("$outdir/s_samples.txt", \@s_samples);
 write_table("$outdir/a_species.txt", \@a_species);
 write_table("$outdir/a_collection.txt", \@a_collection);
 #
-# write_table("$outdir/a_blood_species.txt", \@a_blood_species);
-# write_table("$outdir/p_blood_species.txt", \@p_blood_species);
+write_table("$outdir/a_blood_species.txt", \@a_blood_species);
+write_table("$outdir/p_blood_species.txt", \@p_blood_species);
 #
 
 
