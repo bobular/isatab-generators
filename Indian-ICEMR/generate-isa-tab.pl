@@ -99,7 +99,7 @@ foreach my $filename (glob "$indir/*.{txt,tsv}") {
 #
 #
 
-my @s_samples = ( ['Source Name', 'Sample Name', 'Description','Material Type', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sex (EFO:0000695)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [developmental stage (EFO:0000399)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [age (EFO:0000246)]', 'Unit', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sample size (VBcv:0000983)]','Characteristics [combined feeding and gonotrophic status of insect (VSMO:0002038)]','Term Source Ref', 'Term Accession Number' ] );
+my @s_samples = ( ['Source Name', 'Sample Name', 'Description','Material Type', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sex (EFO:0000695)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [developmental stage (EFO:0000399)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sample size (VBcv:0000983)]','Characteristics [combined feeding and gonotrophic status of insect (VSMO:0002038)]','Term Source Ref', 'Term Accession Number' ] );
 
 
 my @a_species = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Characteristics [species assay result (VBcv:0000961)]', 'Term Source Ref', 'Term Accession Number' ] );
@@ -196,6 +196,7 @@ foreach my $row (@combined_input_rows) {
   my %subspecies_counts; # $subspecies_counts{BCE} = 123; etc for AD, S and T
 
 
+  my ($clean_species) = morpho_species_term($row->{Species});
 
   # now we loop through each blood meal type and create an entry in the sample sheet
   # each mossie needs a Sample Name
@@ -206,7 +207,7 @@ foreach my $row (@combined_input_rows) {
 
     my $num_mossies = $row->{$bm_heading};
     if ($num_mossies && $num_mossies>0) {
-      my $sample_name = sprintf "%s %s %04d", $row->{Species}, $subspecies, ++$sample_number{$row->{Species}}{$subspecies};
+      my $sample_name = sprintf "%s %s %04d", $clean_species, $subspecies, ++$sample_number{$clean_species}{$subspecies};
       # replace non alphanumeric with underscore
       $sample_name =~ s/\W+/_/g;
 
@@ -262,7 +263,8 @@ foreach my $row (@combined_input_rows) {
     if (!$row->{$ss_heading}) {
 
       # create Sample Name
-      my $sample_name = sprintf "%s %s %04d", $row->{Species}, $subspecies, ++$sample_number{$row->{Species}}{$subspecies};
+      my $sample_name = sprintf "%s %s %04d", $clean_species, $subspecies, ++$sample_number{$clean_species}{$subspecies};
+      $sample_name =~ s/\W+/_/g;
 
       # push rows onto s_samples, a_species and a_collection
       push @s_samples, [ '2016-indian-icemr', $sample_name, 'Zero specimens collected', 'pool', 'EFO', '0000663', 'female', 'PATO', '0000383', 'adult', 'IDOMAL', '0000655', '0', '', '', '' ];
