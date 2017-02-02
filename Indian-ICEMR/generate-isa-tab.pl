@@ -232,9 +232,9 @@ foreach my $row (@combined_input_rows) {
 
 	if ($bm_type eq 'Bovine') {
 	  push @p_blood_species, [ "$sample_name.BM_BOVINE", 'bovine blood meal', 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'PRESENT', 'PATO', '0000467' ];
-	  push @p_blood_species, [ "$sample_name.BM_HUMAN", 'human blood meal', 'blood meal', 'VBcv', '00001003', 'human', 'VBsp', '0001357', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_HUMAN", 'human blood meal not detected', 'blood meal', 'VBcv', '00001003', 'human', 'VBsp', '0001357', 'ABSENT', 'PATO', '0000462' ];
 	} elsif ($bm_type eq 'Human') {
-	   push @p_blood_species, [ "$sample_name.BM_BOVINE", 'bovine blood meal', 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'ABSENT', 'PATO', '0000462' ];
+	   push @p_blood_species, [ "$sample_name.BM_BOVINE", 'bovine blood meal not detected', 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'ABSENT', 'PATO', '0000462' ];
 	  push @p_blood_species, [ "$sample_name.BM_HUMAN", 'human blood meal', 'blood meal', 'VBcv', '00001003', 'human', 'VBsp', '0001357', 'PRESENT', 'PATO', '0000467' ];
 	} elsif ($bm_type eq 'B+H') {
 	  push @p_blood_species, [ "$sample_name.BM_BOVINE", 'bovine blood meal', 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'PRESENT', 'PATO', '0000467' ];
