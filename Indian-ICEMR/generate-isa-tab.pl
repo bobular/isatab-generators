@@ -193,7 +193,7 @@ foreach my $row (@combined_input_rows) {
   #
   # TO DO: sanity check that SS counts add up to Total number of ...
   #
-  warn "to do SS sanity check\n";
+  my %subspecies_counts; # $subspecies_counts{BCE} = 123; etc for AD, S and T
 
 
 
@@ -209,6 +209,9 @@ foreach my $row (@combined_input_rows) {
       my $sample_name = sprintf "%s %s %04d", $row->{Species}, $subspecies, ++$sample_number{$row->{Species}}{$subspecies};
       # replace non alphanumeric with underscore
       $sample_name =~ s/\W+/_/g;
+
+      # for sanity check later
+      $subspecies_counts{$subspecies} += $num_mossies;
 
       #push a reference to an array of row data into s_samples
 
@@ -262,11 +265,16 @@ foreach my $row (@combined_input_rows) {
       my $sample_name = sprintf "%s %s %04d", $row->{Species}, $subspecies, ++$sample_number{$row->{Species}}{$subspecies};
 
       # push rows onto s_samples, a_species and a_collection
-      push @s_samples, [ '2016-indian-icemr', $sample_name, 'Zero sample warning TO DO', 'pool', 'EFO', '0000663', 'female', 'PATO', '0000383', 'adult', 'IDOMAL', '0000655', '0', '', '', '' ];
+      push @s_samples, [ '2016-indian-icemr', $sample_name, 'Zero specimens collected', 'pool', 'EFO', '0000663', 'female', 'PATO', '0000383', 'adult', 'IDOMAL', '0000655', '0', '', '', '' ];
       push @a_species, [ $sample_name, "$sample_name.SPECIES", '', 'SPECIES', morpho_species_term($row->{Species}) ];
       push @a_species, [ $sample_name, "$sample_name.$species_protocol_ref" , '', $species_protocol_ref, pcr_species_term($subspecies) ];
       push @a_collection, [ $sample_name, $a_collection_assay_name, '', collection_protocol_ref($row->{'Type of Dwelling'}), '', $row->{Month}, 'India', 'GAZ', '00002839', $lat_decimal, $long_decimal, 'IA', $row->{Village}, 'India' ];
     }
+  }
+
+  # do the SS sanity check
+  foreach my $subspecies (keys %subspecies_counts) {
+    die "subspecies count error... <insert useful info here>\n" unless ($subspecies_counts{$subspecies} == $row->{"SS:$subspecies"});
   }
 
   #sanity checking output
