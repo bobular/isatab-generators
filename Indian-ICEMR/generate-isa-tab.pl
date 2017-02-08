@@ -219,7 +219,6 @@ foreach my $row (@combined_input_rows) {
       my @feeding_status = $bm_type eq 'Unfed' ? ('unfed female insect', 'VSMO', '0000210') : ('fed female insect', 'VSMO', '0000218');
       my $sample_description = sprintf "%d %s%s", $num_mossies, $feeding_status[0], $num_mossies > 1 ? "s" : "";
 
-     
       push @a_species, [ $sample_name, "$sample_name.SPECIES", '', 'SPECIES', morpho_species_term($row->{Species}) ];
       push @a_species, [ $sample_name, "$sample_name.$species_protocol_ref" , '', $species_protocol_ref, pcr_species_term($subspecies) ];
       push @a_collection, [ $sample_name, $a_collection_assay_name, '', collection_protocol_ref($row->{'Type of Dwelling'}), '', $row->{Month}, 'India', 'GAZ', '00002839', $lat_decimal, $long_decimal, 'IA', $row->{Village}, 'India' ];
@@ -230,24 +229,27 @@ foreach my $row (@combined_input_rows) {
 	push @a_blood_species, [ $sample_name, "$sample_name.BM_HUMAN", 'BM_HUMAN', 'p_blood_species.txt' ];
 
 	if ($bm_type eq 'Bovine') {
-	  push @p_blood_species, [ "$sample_name.BM_BOVINE", "$sample_description.with bovine blood meal", 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'PRESENT', 'PATO', '0000467' ];
+	  push @p_blood_species, [ "$sample_name.BM_BOVINE", "bovine blood meal", 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'PRESENT', 'PATO', '0000467' ];
 	  push @p_blood_species, [ "$sample_name.BM_HUMAN", 'human blood meal not detected', 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'ABSENT', 'PATO', '0000462' ];
+	  $sample_description .= " with bovine blood source detected";
 	} elsif ($bm_type eq 'Human') {
 	   push @p_blood_species, [ "$sample_name.BM_BOVINE", 'bovine blood meal not detected', 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'ABSENT', 'PATO', '0000462' ];
 	  push @p_blood_species, [ "$sample_name.BM_HUMAN", 'human blood meal', 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'PRESENT', 'PATO', '0000467' ];
+	   $sample_description .= " with human blood source detected";
 	} elsif ($bm_type eq 'B+H') {
 	  push @p_blood_species, [ "$sample_name.BM_BOVINE", 'bovine blood meal', 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'PRESENT', 'PATO', '0000467' ];
-	  push @p_blood_species, [ "$sample_name.BM_HUMAN", 'human blood meal', 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'PRESENT', 'PATO', '0000467' ]
+	  push @p_blood_species, [ "$sample_name.BM_HUMAN", 'human blood meal', 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'PRESENT', 'PATO', '0000467' ];
+	    $sample_description .= " with bovine and human blood sources detected";
 	} elsif ($bm_type eq 'Others') {
           push @p_blood_species, [ "$sample_name.BM_BOVINE", 'bovine blood meal not detected', 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'ABSENT', 'PATO', '0000462' ];
-          push @p_blood_species, [ "$sample_name.BM_HUMAN", 'human blood meal not detected', 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'ABSENT', 'PATO', '0000462' ]
+          push @p_blood_species, [ "$sample_name.BM_HUMAN", 'human blood meal not detected', 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'ABSENT', 'PATO', '0000462' ];
+	    $sample_description .= " with non-bovine and non-human blood sources detected";
         }
       }
       #	print STDOUT "created '$sample_name' from $row->{Village} that dined on $bm_type\n";
+      push @s_samples, [ '2016-indian-icemr', $sample_name, $sample_description, 'pool', 'EFO', '0000663', 'female', 'PATO', '0000383', 'adult', 'IDOMAL', '0000655', $num_mossies, @feeding_status ];
     }
-
   }
-  push @s_samples, [ '2016-indian-icemr', $sample_name, $sample_description,  'pool', 'EFO', '0000663', 'female', 'PATO', '0000383', 'adult', 'IDOMAL', '0000655', $num_mossies, @feeding_status ];
 
   # add s_samples row with sample size=0 rows when no sib species observed
   # and 2x a_species and 1x a_collection rows too
