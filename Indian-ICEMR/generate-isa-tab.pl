@@ -230,7 +230,7 @@ foreach my $row (@combined_input_rows) {
 	push @a_blood_species, [ $sample_name, "$sample_name.BM_HUMAN", 'BM_HUMAN', 'p_blood_species.txt' ];
 
 	if ($bm_type eq 'Bovine') {
-	  push @p_blood_species, [ "$sample_name.BM_BOVINE", "$sample_description.="with bovine blood meal", 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'PRESENT', 'PATO', '0000467' ];
+	  push @p_blood_species, [ "$sample_name.BM_BOVINE", "$sample_description.with bovine blood meal", 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'PRESENT', 'PATO', '0000467' ];
 	  push @p_blood_species, [ "$sample_name.BM_HUMAN", 'human blood meal not detected', 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'ABSENT', 'PATO', '0000462' ];
 	} elsif ($bm_type eq 'Human') {
 	   push @p_blood_species, [ "$sample_name.BM_BOVINE", 'bovine blood meal not detected', 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'ABSENT', 'PATO', '0000462' ];
@@ -247,7 +247,7 @@ foreach my $row (@combined_input_rows) {
     }
 
   }
-  push @s_samples, [ '2016-indian-icemr', $sample_name, '',  'pool', 'EFO', '0000663', 'female', 'PATO', '0000383', 'adult', 'IDOMAL', '0000655', $num_mossies, @feeding_status ];
+  push @s_samples, [ '2016-indian-icemr', $sample_name, $sample_description,  'pool', 'EFO', '0000663', 'female', 'PATO', '0000383', 'adult', 'IDOMAL', '0000655', $num_mossies, @feeding_status ];
 
   # add s_samples row with sample size=0 rows when no sib species observed
   # and 2x a_species and 1x a_collection rows too
