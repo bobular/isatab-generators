@@ -56,7 +56,7 @@ die "can't make output directory: $outdir\n" unless (-d $outdir);
 
 # an array containing one row per collection (the lat/long on different input lines is merged)
 # array of hashes (colname=>value)
-my @combined_input_rows; # empty to begin with
+#my @combined_input_rows; # empty to begin with
 
 
 # do a wildcard file "search" - results are a list of filenames that match
@@ -72,24 +72,7 @@ foreach my $filename (glob "$indir/*.{txt,tsv}") {
 					     %parser_defaults,
 					    } )->all;
 
-  # now loop through each line of this file and fill up @combined_input_rows array.
-  my $last_line_hash;
-  foreach my $line_hash (@$lines_aoh) {
 
-    if ($line_hash->{'Type of Dwelling'}) {
-      # if the dwelling cell has a value we're in the "main" row
-      push @combined_input_rows, $line_hash;
-
-    } elsif (defined $last_line_hash && $line_hash->{GPS}) {
-      # else we're in the row with only the Easting GPS coord
-      # and we'll copy the GPS value into the previous line (that was already saved in @combined_input_rows)
-      $last_line_hash->{GPS2} = $line_hash->{GPS};
-    }
-
-    $last_line_hash = $line_hash;
-  }
-
-}
 
 # #
 # Set up headers for all the output sheets.
@@ -99,79 +82,17 @@ foreach my $filename (glob "$indir/*.{txt,tsv}") {
 #
 #
 
-my @s_samples = ( ['Source Name', 'Sample Name', 'Description','Material Type', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sex (EFO:0000695)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [developmental stage (EFO:0000399)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sample size (VBcv:0000983)]','Characteristics [combined feeding and gonotrophic status of insect (VSMO:0002038)]','Term Source Ref', 'Term Accession Number' ] );
 
-
-my @a_species = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Characteristics [species assay result (VBcv:0000961)]', 'Term Source Ref', 'Term Accession Number' ] );
-
-my @a_collection = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Performer', 'Date', 'Characteristics [Collection site (VBcv:0000831)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [collection duration in days (VBcv:0001009)]', 'Characteristics [Collection site latitude (VBcv:0000817)]', 'Characteristics [Collection site longitude (VBcv:0000816)]', 'Comment [collection site coordinates]', 'Characteristics [Collection site village (VBcv:0000829)]', 'Characteristics [Collection site country (VBcv:0000701)]' ] ); # 'Characteristics [Collection site location (VBcv:0000698)]', 'Characteristics [Collection site village (VBcv:0000829)]', 'Characteristics [Collection site locality (VBcv:0000697)]', 'Characteristics [Collection site suburb (VBcv:0000845)]', 'Characteristics [Collection site city (VBcv:0000844)]', 'Characteristics [Collection site county (VBcv:0000828)]', 'Characteristics [Collection site district (VBcv:0000699)]', 'Characteristics [Collection site province (VBcv:0000700)]', 'Characteristics [Collection site country (VBcv:0000701)]' ] );
-
-my @a_blood_species = ( [ 'Sample Name', 'Assay Name', 'Protocol REF', 'Raw Data File' ] );
-my @p_blood_species = ( [ 'Assay Name', 'Phenotype Name', 'Observable', 'Term Source Ref', 'Term Accession Number', 'Attribute', 'Term Source Ref', 'Term Accession Number', 'Value', 'Term Source Ref', 'Term Accession Number' ] );
+my @a_blood_species = ( [ 'Sample Name', 'Assay Name', 'Protocol REF','Characteristics [sample size (VBcv:0000983)]', 'Raw Data File' ] );
+my @p_blood_species = ( [ 'Assay Name', 'Phenotype Name', 'Observable', 'Term Source Ref', 'Term Accession Number', 'Attribute', 'Term Source Ref', 'Term Accession Number', 'Comment [note]', 'Value', 'Term Source Ref', 'Term Accession Number' ] );
 
 
 
 #
 # This is the main loop for generating ISA-Tab data
-#
+# Will need headings for at least 2013 seperately from the other years
+# Do I need to make headings for the other sheets if the rest are the same?
 
-# sample number counters (for Sample Name) for each sib species
-my %sample_number; # first level key is Species (raw from spreadsheet as there are prob no typos)
-                   # second level key is sibling code also from spreadsheet, BCE, AD, T and S
-                   # value stored in the two-level hash is the number
-                   #
-                   # $sample_number{'An. culicifacies'}{BCE} = 123
-
-# serial number counter used in a_collection Assay Name
-my $collection_counter = 0;
-
-# then use a four (!) level hash to remember which Assay Name to use for each combination of Village, Date and Location
-my %collection_name; # $collection_name{VILLAGE}{YYYY-MM}{LATITUDE}{LONGITUDE} = "Village_YYYY-MM_C042"
-
-
-foreach my $row (@combined_input_rows) {
-
-
-  # Convert northing and easting to WGS84
-  # Can I take the row GPS2 and make this my @??
-  # is this is the same as using the one at the top of the script?
-
-
-  my $lat_deg_min = $row->{GPS};
-  my $long_deg_min = $row->{GPS2}; # this is undefined for "No GPS record" lines
-
-  my $lat_decimal = ''; # we will write this empty string to a_collection if coord parsing fails
-  my $long_decimal = ''; # ditto
-
-  if (defined $lat_deg_min) {
-    my ($lat_deg, $lat_min) = $lat_deg_min =~ /N (\d+) \D (\d+ (?: \.\d+ )?)/x;
-    if (defined $lat_deg) {
-      $lat_decimal = dm2decimal($lat_deg, $lat_min);
-    } else {
-      warn "'$lat_deg_min' was not expected latitude deg/min format\n";
-    }
-  } else {
-    die "Unexpected empty latitude 'GPS' column in row\n";
-  }
-
-  if (defined $long_deg_min) {
-    my ($long_deg, $long_min) = $long_deg_min =~ /E (\d+) \D (\d+ (?: \.\d+ )?)/x;
-    if (defined $long_deg) {
-      $long_decimal = dm2decimal ($long_deg, $long_min);
-    } else {
-      warn "'$long_deg_min' was not expected longitude deg/min format\n";
-    }
-  }
-
-  # create collection assay name
-  #To make my assay names for collection
-  my $a_collection_assay_name = $collection_name{$row->{Village}}{$row->{Month}}{$lat_decimal}{$long_decimal} //= sprintf "%s_%s_C%03d", $row->{Village}, $row->{Month}, ++$collection_counter;
-
-  # a_species Protocol REF
-  my $species_protocol_ref = $row->{Species} =~ /culicifacies/ ? 'SPECIES_SIB_CUL' : 'SPECIES_SIB_FLUV';
-
-  # check that total moz = sum of bloodmeals
-  my $total_mossies = $row->{'Total number of mosquitoes'};
 
   my @culicifacies_bm_headings = qw/BCE:BM:Bovine	BCE:BM:Human	BCE:BM:B+H BCE:BM:Unfed	BCE:BM:Others AD:BM:Bovine AD:BM:Human AD:BM:B+H AD:BM:Unfed AD:BM:Others/;
   my @fluviatilis_bm_headings = qw/T:BM:Bovine	T:BM:Human	T:BM:B+H	T:BM:Unfed	T:BM:Others	S:BM:Bovine	S:BM:Human	S:BM:B+H	S:BM:Unfed	S:BM:Others/;
@@ -219,15 +140,7 @@ foreach my $row (@combined_input_rows) {
       my @feeding_status = $bm_type eq 'Unfed' ? ('unfed female insect', 'VSMO', '0000210') : ('fed female insect', 'VSMO', '0000218');
       my $sample_description = sprintf "%d %s%s", $num_mossies, $feeding_status[0], $num_mossies > 1 ? "s" : "";
 
-      push @a_species, [ $sample_name, "$sample_name.SPECIES", '', 'SPECIES', morpho_species_term($row->{Species}) ];
-      push @a_species, [ $sample_name, "$sample_name.$species_protocol_ref" , '', $species_protocol_ref, pcr_species_term($subspecies) ];
-      push @a_collection, [ $sample_name, $a_collection_assay_name, '', collection_protocol_ref($row->{'Type of Dwelling'}), '', $row->{Month}, 'India', 'GAZ', '00002839', '1', $lat_decimal, $long_decimal, 'IA', $row->{Village}, 'India' ];
-
-      if ($bm_type ne 'Unfed') {
-	# always two assays on fed insects
-	push @a_blood_species, [ $sample_name, "$sample_name.BM_BOVINE", 'BM_BOVINE', 'p_blood_species.txt' ];
-	push @a_blood_species, [ $sample_name, "$sample_name.BM_HUMAN", 'BM_HUMAN', 'p_blood_species.txt' ];
-
+##################################################################
 	if ($bm_type eq 'Bovine') {
 	  push @p_blood_species, [ "$sample_name.BM_BOVINE", "bovine blood meal", 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'PRESENT', 'PATO', '0000467' ];
 	  push @p_blood_species, [ "$sample_name.BM_HUMAN", 'human blood meal not detected', 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'ABSENT', 'PATO', '0000462' ];
@@ -247,36 +160,9 @@ foreach my $row (@combined_input_rows) {
         }
       }
       #	print STDOUT "created '$sample_name' from $row->{Village} that dined on $bm_type\n";
-      push @s_samples, [ '2016-indian-icemr', $sample_name, $sample_description, 'pool', 'EFO', '0000663', 'female', 'PATO', '0000383', 'adult', 'IDOMAL', '0000655', $num_mossies, @feeding_status ];
     }
   }
 
-  # add s_samples row with sample size=0 rows when no sib species observed
-  # and 2x a_species and 1x a_collection rows too
-  my @ss_headings = $row->{Species} =~ /culic/ ? @culicifacies_ss_headings : @fluviatilis_ss_headings;
-
-  foreach my $ss_heading (@ss_headings) {
-
-    #hints:  you know species $row->{Species}
-    #        get the subspecies from a split on $ss_heading
-
-    # get the subspecies code from the heading
-    my ($tmp_ss, $subspecies) = split /:/, $ss_heading;
-
-    # if the cell is empty we assume it's a zero count for that subspecies
-    if (!$row->{$ss_heading}) {
-
-      # create Sample Name
-      my $sample_name = sprintf "%s %s %04d", $clean_species, $subspecies, ++$sample_number{$clean_species}{$subspecies};
-      $sample_name =~ s/\W+/_/g;
-
-      # push rows onto s_samples, a_species and a_collection
-      push @s_samples, [ '2016-indian-icemr', $sample_name, 'Zero specimens collected', 'pool', 'EFO', '0000663', 'female', 'PATO', '0000383', 'adult', 'IDOMAL', '0000655', '0', '', '', '' ];
-      push @a_species, [ $sample_name, "$sample_name.SPECIES", '', 'SPECIES', morpho_species_term($row->{Species}) ];
-      push @a_species, [ $sample_name, "$sample_name.$species_protocol_ref" , '', $species_protocol_ref, pcr_species_term($subspecies) ];
-      push @a_collection, [ $sample_name, $a_collection_assay_name, '', collection_protocol_ref($row->{'Type of Dwelling'}), '', $row->{Month}, 'India', 'GAZ', '00002839', '1', $lat_decimal, $long_decimal, 'IA', $row->{Village}, 'India' ];
-    }
-  }
 
   # do the SS sanity check
   foreach my $subspecies (keys %subspecies_counts) {
@@ -306,10 +192,10 @@ foreach my $row (@combined_input_rows) {
 
 
 
-write_table("$outdir/s_samples.txt", \@s_samples);
+#write_table("$outdir/s_samples.txt", \@s_samples);
 
-write_table("$outdir/a_species.txt", \@a_species);
-write_table("$outdir/a_collection.txt", \@a_collection);
+#write_table("$outdir/a_species.txt", \@a_species);
+#write_table("$outdir/a_collection.txt", \@a_collection);
 #
 write_table("$outdir/a_blood_species.txt", \@a_blood_species);
 write_table("$outdir/p_blood_species.txt", \@p_blood_species);
