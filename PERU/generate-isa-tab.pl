@@ -141,22 +141,127 @@ my @p_blood_species = ( [ 'Assay Name', 'Phenotype Name', 'Observable', 'Term So
       my $sample_description = sprintf "%d %s%s", $num_mossies, $feeding_status[0], $num_mossies > 1 ? "s" : "";
 
 ##################################################################
-	if ($bm_type eq 'Bovine') {
-	  push @p_blood_species, [ "$sample_name.BM_BOVINE", "bovine blood meal", 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'PRESENT', 'PATO', '0000467' ];
-	  push @p_blood_species, [ "$sample_name.BM_HUMAN", 'human blood meal not detected', 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'ABSENT', 'PATO', '0000462' ];
-	  $sample_description .= " with bovine blood source detected";
-	} elsif ($bm_type eq 'Human') {
-	   push @p_blood_species, [ "$sample_name.BM_BOVINE", 'bovine blood meal not detected', 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'ABSENT', 'PATO', '0000462' ];
-	  push @p_blood_species, [ "$sample_name.BM_HUMAN", 'human blood meal', 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'PRESENT', 'PATO', '0000467' ];
-	   $sample_description .= " with human blood source detected";
-	} elsif ($bm_type eq 'B+H') {
-	  push @p_blood_species, [ "$sample_name.BM_BOVINE", 'bovine blood meal', 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'PRESENT', 'PATO', '0000467' ];
-	  push @p_blood_species, [ "$sample_name.BM_HUMAN", 'human blood meal', 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'PRESENT', 'PATO', '0000467' ];
-	    $sample_description .= " with bovine and human blood sources detected";
-	} elsif ($bm_type eq 'Others') {
-          push @p_blood_species, [ "$sample_name.BM_BOVINE", 'bovine blood meal not detected', 'blood meal', 'VBcv', '0001003', 'bovine', 'VBsp', '0001401', 'ABSENT', 'PATO', '0000462' ];
-          push @p_blood_species, [ "$sample_name.BM_HUMAN", 'human blood meal not detected', 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'ABSENT', 'PATO', '0000462' ];
-	    $sample_description .= " with non-bovine and non-human blood sources detected";
+	if ($bm_type eq 'Human') {
+	  push @p_blood_species, [ "$sample_name.BM_HUMAN", "human blood meal", 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'PRESENT', 'PATO', '0000467' ];
+	  push @p_blood_species, [ "$sample_name.BM_COW", 'cow blood meal not detected', 'blood meal', 'VBcv', '0001003', 'cow', 'VBsp', '0001925', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_PIG", 'pig blood meal not detected', 'blood meal', 'VBcv', '0001003', 'pig', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_DOG", 'dog blood meal not detected', 'blood meal', 'VBcv', '0001003', 'dog', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_GOAT", 'goat blood meal not detected', 'blood meal', 'VBcv', '0001003', 'goat', 'VBsp', '0001547', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_GALLIFORMES", 'galliformes blood meal not detected', 'blood meal', 'VBcv', '0001003', 'galliformes', 'VBsp', 'TO DO', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_RAT", 'rat blood meal not detected', 'blood meal', 'VBcv', '0001003', 'rat', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_RODENTIA", 'rodentia blood meal not detected', 'blood meal', 'VBcv', '0001003', 'rodentia', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_MONKEY", 'monkey blood meal not detected', 'blood meal', 'VBcv', '0001003', 'monkey', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_DIDELPHIS", 'didelphis blood meal not detected', 'blood meal', 'VBcv', '0001003', 'didelphis', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  $sample_description .= " with human blood source detected";
+	} elsif ($bm_type eq 'Cow') {
+	  push @p_blood_species, [ "$sample_name.BM_HUMAN", "human blood meal not detected", 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_COW", 'cow blood meal', 'blood meal', 'VBcv', '0001003', 'cow', 'VBsp', '0001925', 'PRESENT', 'PATO', '0000467' ];
+	  push @p_blood_species, [ "$sample_name.BM_PIG", 'pig blood meal not detected', 'blood meal', 'VBcv', '0001003', 'pig', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_DOG", 'dog blood meal not detected', 'blood meal', 'VBcv', '0001003', 'dog', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_GOAT", 'goat blood meal not detected', 'blood meal', 'VBcv', '0001003', 'goat', 'VBsp', '0001547', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_GALLIFORMES", 'galliformes blood meal not detected', 'blood meal', 'VBcv', '0001003', 'galliformes', 'VBsp', 'TO DO', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_RAT", 'rat blood meal not detected', 'blood meal', 'VBcv', '0001003', 'rat', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_RODENTIA", 'rodentia blood meal not detected', 'blood meal', 'VBcv', '0001003', 'rodentia', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_MONKEY", 'monkey blood meal not detected', 'blood meal', 'VBcv', '0001003', 'monkey', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_DIDELPHIS", 'didelphis blood meal not detected', 'blood meal', 'VBcv', '0001003', 'didelphis', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	   $sample_description .= " with cow blood source detected";
+	} elsif ($bm_type eq 'Pig') {
+	  push @p_blood_species, [ "$sample_name.BM_HUMAN", "human blood meal not detected", 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_COW", 'cow blood meal not detected', 'blood meal', 'VBcv', '0001003', 'cow', 'VBsp', '0001925', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_PIG", 'pig blood meal', 'blood meal', 'VBcv', '0001003', 'pig', 'VBsp', 'TO ADD', 'PRESENT', 'PATO', '0000467' ];
+	  push @p_blood_species, [ "$sample_name.BM_DOG", 'dog blood meal not detected', 'blood meal', 'VBcv', '0001003', 'dog', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_GOAT", 'goat blood meal not detected', 'blood meal', 'VBcv', '0001003', 'goat', 'VBsp', '0001547', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_GALLIFORMES", 'galliformes blood meal not detected', 'blood meal', 'VBcv', '0001003', 'galliformes', 'VBsp', 'TO DO', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_RAT", 'rat blood meal not detected', 'blood meal', 'VBcv', '0001003', 'rat', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_RODENTIA", 'rodentia blood meal not detected', 'blood meal', 'VBcv', '0001003', 'rodentia', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_MONKEY", 'monkey blood meal not detected', 'blood meal', 'VBcv', '0001003', 'monkey', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_DIDELPHIS", 'didelphis blood meal not detected', 'blood meal', 'VBcv', '0001003', 'didelphis', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	    $sample_description .= " with pig blood sources detected";
+	} elsif ($bm_type eq 'Dog') {
+	  push @p_blood_species, [ "$sample_name.BM_HUMAN", "human blood meal not detected", 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_COW", 'cow blood meal not detected', 'blood meal', 'VBcv', '0001003', 'cow', 'VBsp', '0001925', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_PIG", 'pig blood meal not detected', 'blood meal', 'VBcv', '0001003', 'pig', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_DOG", 'dog blood meal', 'blood meal', 'VBcv', '0001003', 'dog', 'VBsp', 'TO ADD', 'PRESENT', 'PATO', '0000467' ];
+	  push @p_blood_species, [ "$sample_name.BM_GOAT", 'goat blood meal not detected', 'blood meal', 'VBcv', '0001003', 'goat', 'VBsp', '0001547', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_GALLIFORMES", 'galliformes blood meal not detected', 'blood meal', 'VBcv', '0001003', 'galliformes', 'VBsp', 'TO DO', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_RAT", 'rat blood meal not detected', 'blood meal', 'VBcv', '0001003', 'rat', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_RODENTIA", 'rodentia blood meal not detected', 'blood meal', 'VBcv', '0001003', 'rodentia', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_MONKEY", 'monkey blood meal not detected', 'blood meal', 'VBcv', '0001003', 'monkey', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_DIDELPHIS", 'didelphis blood meal not detected', 'blood meal', 'VBcv', '0001003', 'didelphis', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	    $sample_description .= " with dog blood source detected";
+	} elsif ($bm_type eq 'Goat') {
+	  push @p_blood_species, [ "$sample_name.BM_HUMAN", "human blood meal not detected", 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_COW", 'cow blood meal not detected', 'blood meal', 'VBcv', '0001003', 'cow', 'VBsp', '0001925', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_PIG", 'pig blood meal not detected', 'blood meal', 'VBcv', '0001003', 'pig', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_DOG", 'dog blood meal not detected', 'blood meal', 'VBcv', '0001003', 'dog', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_GOAT", 'goat blood meal', 'blood meal', 'VBcv', '0001003', 'goat', 'VBsp', '0001547', 'PRESENT', 'PATO', '0000467' ];
+	  push @p_blood_species, [ "$sample_name.BM_GALLIFORMES", 'galliformes blood meal not detected', 'blood meal', 'VBcv', '0001003', 'galliformes', 'VBsp', 'TO DO', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_RAT", 'rat blood meal not detected', 'blood meal', 'VBcv', '0001003', 'rat', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_RODENTIA", 'rodentia blood meal not detected', 'blood meal', 'VBcv', '0001003', 'rodentia', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_MONKEY", 'monkey blood meal not detected', 'blood meal', 'VBcv', '0001003', 'monkey', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_DIDELPHIS", 'didelphis blood meal not detected', 'blood meal', 'VBcv', '0001003', 'didelphis', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	    $sample_description .= " with goat blood source detected";
+	} elsif ($bm_type eq 'Galliformes') {
+	  push @p_blood_species, [ "$sample_name.BM_HUMAN", "human blood meal not detected", 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_COW", 'cow blood meal not detected', 'blood meal', 'VBcv', '0001003', 'cow', 'VBsp', '0001925', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_PIG", 'pig blood meal not detected', 'blood meal', 'VBcv', '0001003', 'pig', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_DOG", 'dog blood meal not detected', 'blood meal', 'VBcv', '0001003', 'dog', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_GOAT", 'goat blood meal not detected', 'blood meal', 'VBcv', '0001003', 'goat', 'VBsp', '0001547', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_GALLIFORMES", 'galliformes blood meal', 'blood meal', 'VBcv', '0001003', 'galliformes', 'VBsp', 'TO DO', 'PRESENT', 'PATO', '0000467' ];
+	  push @p_blood_species, [ "$sample_name.BM_RAT", 'rat blood meal not detected', 'blood meal', 'VBcv', '0001003', 'rat', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_RODENTIA", 'rodentia blood meal not detected', 'blood meal', 'VBcv', '0001003', 'rodentia', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_MONKEY", 'monkey blood meal not detected', 'blood meal', 'VBcv', '0001003', 'monkey', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_DIDELPHIS", 'didelphis blood meal not detected', 'blood meal', 'VBcv', '0001003', 'didelphis', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	    $sample_description .= " with galliformes blood source detected";
+	} elsif ($bm_type eq 'Rat') {
+	  push @p_blood_species, [ "$sample_name.BM_HUMAN", "human blood meal not detected", 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_COW", 'cow blood meal not detected', 'blood meal', 'VBcv', '0001003', 'cow', 'VBsp', '0001925', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_PIG", 'pig blood meal not detected', 'blood meal', 'VBcv', '0001003', 'pig', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_DOG", 'dog blood meal not detected', 'blood meal', 'VBcv', '0001003', 'dog', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_GOAT", 'goat blood meal not detected', 'blood meal', 'VBcv', '0001003', 'goat', 'VBsp', '0001547', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_GALLIFORMES", 'galliformes blood meal not detected', 'blood meal', 'VBcv', '0001003', 'galliformes', 'VBsp', 'TO DO', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_RAT", 'rat blood meal', 'blood meal', 'VBcv', '0001003', 'rat', 'VBsp', 'TO ADD', 'PRESENT', 'PATO', '0000467' ];
+	  push @p_blood_species, [ "$sample_name.BM_RODENTIA", 'rodentia blood meal not detected', 'blood meal', 'VBcv', '0001003', 'rodentia', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_MONKEY", 'monkey blood meal not detected', 'blood meal', 'VBcv', '0001003', 'monkey', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_DIDELPHIS", 'didelphis blood meal not detected', 'blood meal', 'VBcv', '0001003', 'didelphis', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	    $sample_description .= " with rat blood source detected";
+	} elsif ($bm_type eq 'Rodentia') {
+	  push @p_blood_species, [ "$sample_name.BM_HUMAN", "human blood meal not detected", 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_COW", 'cow blood meal not detected', 'blood meal', 'VBcv', '0001003', 'cow', 'VBsp', '0001925', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_PIG", 'pig blood meal not detected', 'blood meal', 'VBcv', '0001003', 'pig', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_DOG", 'dog blood meal not detected', 'blood meal', 'VBcv', '0001003', 'dog', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_GOAT", 'goat blood meal not detected', 'blood meal', 'VBcv', '0001003', 'goat', 'VBsp', '0001547', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_GALLIFORMES", 'galliformes blood meal not detected', 'blood meal', 'VBcv', '0001003', 'galliformes', 'VBsp', 'TO DO', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_RAT", 'rat blood meal not detected', 'blood meal', 'VBcv', '0001003', 'rat', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_RODENTIA", 'rodentia blood meal', 'blood meal', 'VBcv', '0001003', 'rodentia', 'VBsp', 'TO ADD', 'PRESENT', 'PATO', '0000467' ];
+	  push @p_blood_species, [ "$sample_name.BM_MONKEY", 'monkey blood meal not detected', 'blood meal', 'VBcv', '0001003', 'monkey', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_DIDELPHIS", 'didelphis blood meal not detected', 'blood meal', 'VBcv', '0001003', 'didelphis', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	    $sample_description .= " with rodentia blood source detected";
+	} elsif ($bm_type eq 'Monkey') {
+	  push @p_blood_species, [ "$sample_name.BM_HUMAN", "human blood meal not detected", 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_COW", 'cow blood meal not detected', 'blood meal', 'VBcv', '0001003', 'cow', 'VBsp', '0001925', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_PIG", 'pig blood meal not detected', 'blood meal', 'VBcv', '0001003', 'pig', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_DOG", 'dog blood meal not detected', 'blood meal', 'VBcv', '0001003', 'dog', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_GOAT", 'goat blood meal not detected', 'blood meal', 'VBcv', '0001003', 'goat', 'VBsp', '0001547', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_GALLIFORMES", 'galliformes blood meal not detected', 'blood meal', 'VBcv', '0001003', 'galliformes', 'VBsp', 'TO DO', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_RAT", 'rat blood meal not detected', 'blood meal', 'VBcv', '0001003', 'rat', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_RODENTIA", 'rodentia blood meal not detected', 'blood meal', 'VBcv', '0001003', 'rodentia', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_MONKEY", 'monkey blood meal', 'blood meal', 'VBcv', '0001003', 'monkey', 'VBsp', 'TO ADD', 'PRESENT', 'PATO', '0000467' ];
+	  push @p_blood_species, [ "$sample_name.BM_DIDELPHIS", 'didelphis blood meal not detected', 'blood meal', 'VBcv', '0001003', 'didelphis', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	    $sample_description .= " with monkey blood source detected";
+	} elsif ($bm_type eq 'Didelphis') {
+	  push @p_blood_species, [ "$sample_name.BM_HUMAN", "human blood meal not detected", 'blood meal', 'VBcv', '0001003', 'human', 'VBsp', '0001357', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_COW", 'cow blood meal not detected', 'blood meal', 'VBcv', '0001003', 'cow', 'VBsp', '0001925', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_PIG", 'pig blood meal not detected', 'blood meal', 'VBcv', '0001003', 'pig', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_DOG", 'dog blood meal not detected', 'blood meal', 'VBcv', '0001003', 'dog', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_GOAT", 'goat blood meal not detected', 'blood meal', 'VBcv', '0001003', 'goat', 'VBsp', '0001547', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_GALLIFORMES", 'galliformes blood meal not detected', 'blood meal', 'VBcv', '0001003', 'galliformes', 'VBsp', 'TO DO', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_RAT", 'rat blood meal not detected', 'blood meal', 'VBcv', '0001003', 'rat', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_RODENTIA", 'rodentia blood meal not detected', 'blood meal', 'VBcv', '0001003', 'rodentia', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_MONKEY", 'monkey blood meal not detected', 'blood meal', 'VBcv', '0001003', 'monkey', 'VBsp', 'TO ADD', 'ABSENT', 'PATO', '0000462' ];
+	  push @p_blood_species, [ "$sample_name.BM_DIDELPHIS", 'didelphis blood meal', 'blood meal', 'VBcv', '0001003', 'didelphis', 'VBsp', 'TO ADD', 'PRESENT', 'PATO', '0000467' ];
+	    $sample_description .= " with didelphis blood source detected";
+
         }
       }
       #	print STDOUT "created '$sample_name' from $row->{Village} that dined on $bm_type\n";
