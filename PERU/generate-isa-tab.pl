@@ -108,7 +108,7 @@ foreach my $filename (glob "$indir/*.{txt,tsv}") {
       my $assay_name = "$sample_name.$protocol_ref";
 
       # do the assay line
-      push @a_blood_species, [ $sample_name, $assay_name, $protocol_ref, 'Characteristics [sample size (VBcv:0000983]', 'p_blood_species.txt' ];
+      push @a_blood_species, [ $sample_name, $assay_name, $protocol_ref, '1', 'p_blood_species.txt' ];
 
       # do the phenotype line
       if (lc($assay_result) eq 'positiv') {
