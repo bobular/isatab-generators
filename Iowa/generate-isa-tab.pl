@@ -378,7 +378,9 @@ foreach my $county (keys %place_trap_date_species) {
 			    $species, $trap_species{$trap_ref}{$species}{term_source_ref}, $trap_species{$trap_ref}{$species}{term_accession_number}
 		       ];
 
-	  my $zero_collection_assay_name = $collection_name{$county}{$site}{$trap_ref}{"ZERO_DATES"} //= whitespace_to_underscore(sprintf "%s %s %s Z%04d", $county, $site, $trap_ref, ++$zero_collection_counter);
+	  my $trap = $trap_ref;
+	  $trap =~ s/COLLECT_//;
+	  my $zero_collection_assay_name = $collection_name{$county}{$site}{$trap_ref}{"ZERO_DATES"}{$species} //= whitespace_to_underscore(sprintf "%s %s %s %s Z%04d", $county, $site, $trap, $species, ++$zero_collection_counter);
 
 	  my $location = $site2location{$county}{$site};
 
