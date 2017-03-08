@@ -70,13 +70,26 @@ while ( my $row = $csv->getline( $locations_fh ) ) {
 				    latitude => $latitude,
 				    longitude => $longitude,
 				  };
+
+  # this is for the zero collections
+  warn "duplicate site name '$county' - '$official_site' with different coords"
+    if ($site2location{$county}{$official_site} &&
+	abs($site2location{$county}{$official_site}{latitude} - $latitude) > 0.01 &&
+	abs($site2location{$county}{$official_site}{longitude} - $longitude) > 0.01);
+
+  $site2location{$county}{$official_site} = { name => $official_site,
+					      county => $county,
+					      latitude => $latitude,
+					      longitude => $longitude,
+					    };
+
 }
 
 my @s_samples = ( ['Source Name', 'Sample Name', 'Description', 'Material Type', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sex (EFO:0000695)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [developmental stage (EFO:0000399)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sample size (VBcv:0000983)]' ] );
 
 my @a_species = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Characteristics [species assay result (VBcv:0000961)]', 'Term Source Ref', 'Term Accession Number' ] );
 
-my @a_collection = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Date', 'Comment [Raw date]', 'Characteristics [Collection site (VBcv:0000831)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [Collection site latitude (VBcv:0000817)]', 'Characteristics [Collection site longitude (VBcv:0000816)]' ] );
+my @a_collection = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Date', 'Comment [Raw date]', 'Characteristics [Collection site (VBcv:0000831)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [Collection site latitude (VBcv:0000817)]', 'Characteristics [Collection site longitude (VBcv:0000816)]', 'Characteristics [Collection site locality (VBcv:0000697)]', 'Characteristics [Collection site county (VBcv:0000828)]' ] );
 
 my @a_virus = ( [
 		 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Raw Data File'
@@ -92,7 +105,13 @@ my @p_virus = ( [
 # serial number counter used in a_collection Assay Name
 my $collection_counter = 0;
 # then use a four (!) level hash to remember which Assay Name to use for each combination of Village, Date and Location
-my %collection_name; # $collection_name{COUNTY}{SITENAME}{TRAPTYPE}{SUBMITTED_DATE_RANGE} = "County_Site_TrapType_C001"
+my %collection_name; # $collection_name{COUNTY}{SITENAME}{TRAP_REF}{SUBMITTED_DATE_RANGE} = "County_Site_TrapType_C001"
+
+# this is used to record all trap locations and dates
+# used for outputting zero count records
+my %place_trap_date_species; # $place_trap_date_species{COUNTY}{SITENAME}{TRAP_REF}{PROCESSED_DATE}{FULL_SPECIES} = count
+my %trap_species; # $trap_species{TRAP_REF}{FULL_SPECIES} = { term_source_ref => 'VBsp', term_accession_number => 0123125 }
+
 
 # sample counter
 # for each location/species
@@ -185,9 +204,13 @@ foreach my $raw_data_file (@raw_data_files) {
 
     # (for CDC/gravid)
     my $trap_type = $row->{Trap} || "NJLT";
+    my $trap_ref = uc('COLLECT_'.$trap_type);
 
     # figure out the collection assay name
-    my $a_collection_assay_name = $collection_name{$location->{county}}{$location->{name}}{$trap_type}{$orig_date} //= whitespace_to_underscore(sprintf "%s %s %s C%04d", $location->{county}, $location->{name}, $trap_type, ++$collection_counter);
+    my $a_collection_assay_name = $collection_name{$location->{county}}{$location->{name}}{$trap_ref}{$orig_date} //= whitespace_to_underscore(sprintf "%s %s %s C%04d", $location->{county}, $location->{name}, $trap_type, ++$collection_counter);
+
+    # remember this collection place and date for later zero count handling
+    my $place_trap_date = $place_trap_date_species{$location->{county}}{$location->{name}}{$trap_ref}{$date} //= {};
 
     # NEED TO FIGURE OUT HOW TO DEAL WITH CDC (all in one row) vs NJLT (one species per row) 
     #
@@ -219,16 +242,22 @@ foreach my $raw_data_file (@raw_data_files) {
 			   SLE => sanitise_virus_result($row->{SLE}),
 			   WEE => sanitise_virus_result($row->{WEE}),
 			   LACV => sanitise_virus_result($row->{LACV}),
-			   collection_protocol_ref => ($trap_type =~ /gravid/i ? 'COLLECT_GRAVID' : 'COLLECT_CDC'),
+			   collection_protocol_ref => $trap_ref,
 			  };
+      $place_trap_date->{$full_species_name} = $row->{'Pool Size'};
+      $trap_species{$trap_ref}{$full_species_name} = { term_source_ref => $species_tsr, term_accession_number => $species_tan };
     } elsif ($row->{location}) {
       # all the species count headings in the NJLT files end in M or F (male/female)
       foreach my $heading (grep /\s+[MF]$/, keys %$row) {
 
+	my ($species, $mf) = $heading =~ /^(.+?)\s+([MF])/;
+	my ($full_species_name, $species_tsr, $species_tan) = species_term($species);
 	my $count = $row->{$heading};
+
+	$place_trap_date->{$full_species_name} = $count;
+	$trap_species{$trap_ref}{$full_species_name} = { term_source_ref => $species_tsr, term_accession_number => $species_tan };
+
 	if ($count > 0) {
-	  my ($species, $mf) = $heading =~ /^(.+?)\s+([MF])/;
-	  my ($full_species_name, $species_tsr, $species_tan) = species_term($species);
 	  my ($sex, $sex_tsr, $sex_tan) = sex_term($mf);
 
 	  push @species_data, {
@@ -245,10 +274,6 @@ foreach my $raw_data_file (@raw_data_files) {
 			       LACV => sanitise_virus_result($row->{LACV}),
 			       collection_protocol_ref => 'COLLECT_NJLT',
 			      };
-	} else {
-	  warn "need to handle zero counts properly - ignored at the moment!\n" unless ($zero_warned++);
-	  # TO DO - probably skip zeroes for the first pass at ISA-Tab/Chado-loading
-	  # then deal with zeroes for both CDC and NJLT data properly
 	}
       }
     } else {
@@ -287,6 +312,7 @@ foreach my $raw_data_file (@raw_data_files) {
 			   $orig_date,
 			   'State of Iowa', 'GAZ', '00004438',
 			   $location->{latitude}, $location->{longitude},
+			   $location->{name}, $location->{county},
 			  ];
       foreach my $virus (qw/WNV SLE WEE LACV/) {
 	if (defined $data->{$virus}) { # if a test has been done
@@ -312,6 +338,69 @@ foreach my $raw_data_file (@raw_data_files) {
 
   }
 }
+
+
+#
+# Now process the zeroes!
+#
+
+my %zero_sample_counter;
+my $zero_collection_counter = 0;
+
+foreach my $county (keys %place_trap_date_species) {
+  foreach my $site (keys %{ $place_trap_date_species{$county} }) {
+    foreach my $trap_ref (keys %{ $place_trap_date_species{$county}{$site} }) {
+      # go through all the species we've seen for this trap type
+      foreach my $species (keys %{ $trap_species{$trap_ref} }) {
+	my @dates = ();
+	foreach my $date (keys %{ $place_trap_date_species{$county}{$site}{$trap_ref} }) {
+	  # check each date to see if it was a zero count
+	  push @dates, $date unless ($place_trap_date_species{$county}{$site}{$trap_ref}{$date}{$species});
+	}
+	if (@dates) {
+	  # refer to Dan's email: What assays and metadata should be attached to a zero count collection sample
+	  my $sample_name = whitespace_to_underscore(sprintf "%s %s Z%02d", $county, $species, ++$zero_sample_counter{$county}{$species});
+	  push @s_samples, [
+			    'Iowa zeroes',
+			    $sample_name,
+			    'Zero mosquitoes collected',
+			    'pool', 'EFO', '0000663', # Material Type
+			    ($trap_ref eq 'COLLECT_NJLT' ? ('', '', '') : sex_term('F')),
+			    'adult', 'IDOMAL', '0000655', # Developmental Stage
+			    0  # Sample size
+			   ];
+
+	  push @a_species, [
+			    $sample_name,
+			    "$sample_name.SPECIES",
+			    'Species assertion by absence from collection',
+			    'SPECIES',
+			    $species, $trap_species{$trap_ref}{$species}{term_source_ref}, $trap_species{$trap_ref}{$species}{term_accession_number}
+		       ];
+
+	  my $zero_collection_assay_name = $collection_name{$county}{$site}{$trap_ref}{"ZERO_DATES"} //= whitespace_to_underscore(sprintf "%s %s %s Z%04d", $county, $site, $trap_ref, ++$zero_collection_counter);
+
+	  my $location = $site2location{$county}{$site};
+
+	  push @a_collection, [
+			       $sample_name,
+			       $zero_collection_assay_name,
+			       '', # description TO DO
+			       $trap_ref,
+			       join(';', sort @dates),
+			       '',
+			       'State of Iowa', 'GAZ', '00004438',
+			       $location->{latitude}, $location->{longitude},
+			       $site, $county,
+			      ];
+	}
+      }
+
+    }
+  }
+}
+
+
 
 
 write_table("$outdir/s_samples.txt", \@s_samples);
