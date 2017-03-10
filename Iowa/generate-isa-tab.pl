@@ -85,7 +85,7 @@ while ( my $row = $csv->getline( $locations_fh ) ) {
 
 }
 
-my @s_samples = ( ['Source Name', 'Sample Name', 'Description', 'Material Type', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sex (EFO:0000695)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [developmental stage (EFO:0000399)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sample size (VBcv:0000983)]' ] );
+my @s_samples = ( ['Source Name', 'Sample Name', 'Description', 'Material Type', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sex (EFO:0000695)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [developmental stage (EFO:0000399)]', 'Term Source Ref', 'Term Accession Number', 'Characteristics [sample size (VBcv:0000983)]', 'Characteristics [male count (VBcv:0001012)]', 'Characteristics [female count (VBcv:0001013)]' ] );
 
 my @a_species = ( [ 'Sample Name', 'Assay Name', 'Description', 'Protocol REF', 'Characteristics [species assay result (VBcv:0000961)]', 'Term Source Ref', 'Term Accession Number' ] );
 
@@ -231,6 +231,8 @@ foreach my $raw_data_file (@raw_data_files) {
       my ($full_species_name, $species_tsr, $species_tan) = species_term($row->{Species});
       my ($sex, $sex_tsr, $sex_tan) = sex_term('F');
       push @species_data, {
+			   female_count => $row->{'Pool Size'},
+			   male_count => 0,
 			   count => $row->{'Pool Size'},
 			   species => $full_species_name,
 			   species_term_source_ref => $species_tsr,
@@ -248,21 +250,27 @@ foreach my $raw_data_file (@raw_data_files) {
       $trap_species{$trap_ref}{$full_species_name} = { term_source_ref => $species_tsr, term_accession_number => $species_tan };
     } elsif ($row->{location}) {
       # all the species count headings in the NJLT files end in M or F (male/female)
-      foreach my $heading (grep /\s+[MF]$/, keys %$row) {
+      my %species;
+      map { /^(.+)\s+[MF]$/ and $species{$1}=1 } keys %$row;
+      foreach my $species (keys %species) {
 
-	my ($species, $mf) = $heading =~ /^(.+?)\s+([MF])/;
 	my ($full_species_name, $species_tsr, $species_tan) = species_term($species);
-	my $count = $row->{$heading};
+	my $male_count = $row->{"$species M"};
+	my $female_count = $row->{"$species F"};
+	my $count = $male_count + $female_count;
 
 	$place_trap_date->{$full_species_name} = $count;
 	$trap_species{$trap_ref}{$full_species_name} = { term_source_ref => $species_tsr, term_accession_number => $species_tan };
 
 	if ($count > 0) {
-	  my ($sex, $sex_tsr, $sex_tan) = sex_term($mf);
+	  my $sex_char = $female_count == 0 ? 'M' : $male_count == 0 ? 'F' : '?';
+	  my ($sex, $sex_tsr, $sex_tan) = sex_term($sex_char);
 
 	  push @species_data, {
-			       count => $row->{$heading},
-			       sex => 'female',
+			       count => $count,
+			       female_count => $female_count,
+			       male_count => $male_count,
+			       sex => $sex,
 			       sex_term_source_ref => $sex_tsr,
 			       sex_term_accession_number => $sex_tan,
 			       species => $full_species_name,
@@ -292,7 +300,9 @@ foreach my $raw_data_file (@raw_data_files) {
 			'pool', 'EFO', '0000663', # Material Type
 			$data->{sex}, $data->{sex_term_source_ref}, $data->{sex_term_accession_number}, # Sex
 			'adult', 'IDOMAL', '0000655', # Developmental Stage
-			$data->{count}  # Sample size
+			$data->{count},  # Sample size
+			$data->{male_count},  #
+			$data->{female_count},  #
 		       ];
 
       push @a_species, [
@@ -367,7 +377,9 @@ foreach my $county (keys %place_trap_date_species) {
 			    'pool', 'EFO', '0000663', # Material Type
 			    ($trap_ref eq 'COLLECT_NJLT' ? ('', '', '') : sex_term('F')),
 			    'adult', 'IDOMAL', '0000655', # Developmental Stage
-			    0  # Sample size
+			    0,  # Sample size
+			    0,
+			    0,
 			   ];
 
 	  push @a_species, [
@@ -439,8 +451,7 @@ sub species_term {
       return ('Anopheles walkeri', 'VBsp', '0003469')
     }
     when (/^CPG$/ or /^(Cx\.|Culex) pipiens group$/) {
-      warn "CPG/culex pipiens group not correctly handled yet\n" unless ($cpg_warned++); #<<< NEED NEW VBsp species complex
-      return ('Culex', 'VBsp', '0002482')
+      return ('Culex pipiens group (Bartholomay et al.)', 'VBsp', '0003238')
     }
     when (/^(Ae\.|Aedes) japonicus$/) {
       return ('Aedes japonicus', 'VBsp', '0000761')
@@ -621,6 +632,9 @@ sub sex_term {
     }
     when (/^F$/i) {
       return ('female', 'PATO', '0000383')
+    }
+    when (/^\?$/i) {
+      return ('mixed sex', 'PATO', '0001338')
     }
     default {
       die "fatal error: unknown sex_term >$input<\n";
