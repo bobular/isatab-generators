@@ -602,7 +602,7 @@ sub species_term {
       return ('genus Orthopodomyia', 'VBsp', '0001301');
     }
     when (/^Orthopodomyia alba$/) {
-      return ('Orthopodomyia alba', 'VBsp', '?TBD?');
+      return ('Orthopodomyia alba', 'VBsp', '0001302');
     }
 
     when (/^Psorophora \?\?\?$/) {
