@@ -107,11 +107,11 @@ my $collection_counter = 0;
 # then use a four (!) level hash to remember which Assay Name to use for each combination of Village, Date and Location
 my %collection_name; # $collection_name{COUNTY}{SITENAME}{TRAP_REF}{SUBMITTED_DATE_RANGE} = "County_Site_TrapType_C001"
 
-# this is used to record all trap locations and dates
-# used for outputting zero count records
-my %place_trap_date_species; # $place_trap_date_species{COUNTY}{SITENAME}{TRAP_REF}{PROCESSED_DATE}{FULL_SPECIES} = count
+# this is used to remember which species have been seen for each trap type and collection name
+# used for outputting zero count records later
+my %trap_collection_species; # $trap_collection_species{TRAP_REF}{COLLECTION_NAME}{FULL_SPECIES} = count
+my %trap_collection_rowdata; # $trap_collection_rowdata{TRAP_REF}{COLLECTION_NAME} = [ all values in a_collection sheet to right of Assay Name ]
 my %trap_species; # $trap_species{TRAP_REF}{FULL_SPECIES} = { term_source_ref => 'VBsp', term_accession_number => 0123125 }
-
 
 # sample counter
 # for each location/species
@@ -214,10 +214,22 @@ foreach my $raw_data_file (@raw_data_files) {
     # figure out the collection assay name
     my $a_collection_assay_name = $collection_name{$location->{county}}{$location->{name}}{$trap_ref}{$orig_date} //= whitespace_to_underscore(sprintf "%s %s %s C%04d", $location->{county}, $location->{name}, $trap_type, ++$collection_counter);
 
-    # remember this collection place and date for later zero count handling
-    my $place_trap_date = $place_trap_date_species{$location->{county}}{$location->{name}}{$trap_ref}{$date} //= {};
+    # remember this collection for later zero count handling
+    my $trap_collection = $trap_collection_species{$trap_ref}{$a_collection_assay_name} //= {};
 
-    # NEED TO FIGURE OUT HOW TO DEAL WITH CDC (all in one row) vs NJLT (one species per row) 
+
+    $trap_collection_rowdata{$trap_ref}{$a_collection_assay_name} //= [
+								       '', # description TO DO
+								       $trap_ref,
+								       $date,
+								       $orig_date,
+								       'State of Iowa', 'GAZ', '00004438',
+								       $location->{latitude}, $location->{longitude},
+								       $location->{name}, $location->{county},
+								      ];
+
+
+    # NEED TO FIGURE OUT HOW TO DEAL WITH CDC (all in one row) vs NJLT (one species per row)
     #
     # and also ask Dan about ZEROES for the CDC data
     #
@@ -251,7 +263,7 @@ foreach my $raw_data_file (@raw_data_files) {
 			   LACV => sanitise_virus_result($row->{LACV}),
 			   collection_protocol_ref => $trap_ref,
 			  };
-      $place_trap_date->{$full_species_name} = $row->{'Pool Size'};
+      $trap_collection->{$full_species_name} = $row->{'Pool Size'};
       $trap_species{$trap_ref}{$full_species_name} = { term_source_ref => $species_tsr, term_accession_number => $species_tan };
     } elsif ($row->{location}) {
       # all the species count headings in the NJLT files end in M or F (male/female)
@@ -264,7 +276,7 @@ foreach my $raw_data_file (@raw_data_files) {
 	my $female_count = $row->{"$species F"};
 	my $count = $male_count + $female_count;
 
-	$place_trap_date->{$full_species_name} = $count;
+	$trap_collection->{$full_species_name} = $count;
 	$trap_species{$trap_ref}{$full_species_name} = { term_source_ref => $species_tsr, term_accession_number => $species_tan };
 
 	if ($count > 0) {
@@ -295,7 +307,7 @@ foreach my $raw_data_file (@raw_data_files) {
 
     foreach my $data (@species_data) {
       # do s_sample row
-      my $sample_name = whitespace_to_underscore(sprintf "%s %s S%07d", $location->{county}, $data->{species}, ++$sample_counter{$location->{county}}{$data->{species}});
+      my $sample_name = whitespace_to_underscore(sprintf "%s %s S%04d", $location->{county}, $data->{species}, ++$sample_counter{$location->{county}}{$data->{species}});
 
 
       push @s_samples, [
@@ -321,13 +333,7 @@ foreach my $raw_data_file (@raw_data_files) {
       push @a_collection, [
 			   $sample_name,
 			   $a_collection_assay_name,
-			   '', # description TO DO
-			   $data->{collection_protocol_ref},
-			   $date,
-			   $orig_date,
-			   'State of Iowa', 'GAZ', '00004438',
-			   $location->{latitude}, $location->{longitude},
-			   $location->{name}, $location->{county},
+			   @{$trap_collection_rowdata{$trap_ref}{$a_collection_assay_name}}
 			  ];
       foreach my $virus (qw/WNV SLE WEE LACV/) {
 	if (defined $data->{$virus}) { # if a test has been done
@@ -360,66 +366,50 @@ foreach my $raw_data_file (@raw_data_files) {
 #
 
 my %zero_sample_counter;
-my $zero_collection_counter = 0;
 
-foreach my $county (keys %place_trap_date_species) {
-  foreach my $site (keys %{ $place_trap_date_species{$county} }) {
-    foreach my $trap_ref (keys %{ $place_trap_date_species{$county}{$site} }) {
-      # go through all the species we've seen for this trap type
-      foreach my $species (keys %{ $trap_species{$trap_ref} }) {
-	my @dates = ();
-	foreach my $date (keys %{ $place_trap_date_species{$county}{$site}{$trap_ref} }) {
-	  # check each date to see if it was a zero count
-	  push @dates, $date unless ($place_trap_date_species{$county}{$site}{$trap_ref}{$date}{$species});
-	}
-	if (@dates) {
-	  # refer to Dan's email: What assays and metadata should be attached to a zero count collection sample
-	  my $sample_name = whitespace_to_underscore(sprintf "%s %s Z%02d", $county, $species, ++$zero_sample_counter{$county}{$species});
-	  push @s_samples, [
-			    'Iowa zeroes',
-			    $sample_name,
-			    'Zero mosquitoes collected',
-			    'pool', 'EFO', '0000663', # Material Type
-			    ($trap_ref eq 'COLLECT_NJLT' ? ('', '', '') : sex_term('F')),
-			    'adult', 'IDOMAL', '0000655', # Developmental Stage
-			    0,  # Sample size
-			    0,
-			    0,
-			   ];
+foreach my $trap_ref (keys %trap_collection_species) {
+  foreach my $a_collection_assay_name (keys %{ $trap_collection_species{$trap_ref} }) {
+    my @missing_species = ();
+    # go through all the species we've seen for this trap type
+    # and see which ones we didn't a non-zero count for
+    foreach my $species (keys %{ $trap_species{$trap_ref} }) {
+      push @missing_species, $species unless ($trap_collection_species{$trap_ref}{$a_collection_assay_name}{$species});
+    }
 
-	  push @a_species, [
-			    $sample_name,
-			    "$sample_name.SPECIES",
-			    'Species assertion by absence from collection',
-			    'SPECIES',
-			    $species, $trap_species{$trap_ref}{$species}{term_source_ref}, $trap_species{$trap_ref}{$species}{term_accession_number}
+    if (@missing_species) {
+      # refer to Dan's email: What assays and metadata should be attached to a zero count collection sample
+      my $site = $trap_collection_rowdata{$trap_ref}{$a_collection_assay_name}[9];
+      my $county = $trap_collection_rowdata{$trap_ref}{$a_collection_assay_name}[10];
+      my $sample_name = whitespace_to_underscore(sprintf "%s %s Z%04d", $county, $site, ++$zero_sample_counter{$county}{$site});
+      push @s_samples, [
+			'Iowa zeroes',
+			$sample_name,
+			'Record of absence of some species of mosquito',
+			'pool', 'EFO', '0000663', # Material Type
+			($trap_ref eq 'COLLECT_NJLT' ? ('', '', '') : sex_term('F')),
+			'adult', 'IDOMAL', '0000655', # Developmental Stage
+			0,0,0  # Sample size and m / f counts
 		       ];
 
-	  my $trap = $trap_ref;
-	  $trap =~ s/COLLECT_//;
-	  my $zero_collection_assay_name = $collection_name{$county}{$site}{$trap_ref}{"ZERO_DATES"}{$species} //= whitespace_to_underscore(sprintf "%s %s %s %s Z%04d", $county, $site, $trap, $species, ++$zero_collection_counter);
-
-	  my $location = $site2location{$county}{$site};
-
-	  push @a_collection, [
-			       $sample_name,
-			       $zero_collection_assay_name,
-			       '', # description TO DO
-			       $trap_ref,
-			       join(';', sort @dates),
-			       '',
-			       'State of Iowa', 'GAZ', '00004438',
-			       $location->{latitude}, $location->{longitude},
-			       $site, $county,
-			      ];
-	}
+      my $s = 1;
+      foreach my $species (@missing_species) {
+	push @a_species, [
+			  $sample_name,
+			  "$sample_name.SPECIES.".$s++,
+			  'Species assertion by absence from collection',
+			  'SPECIES',
+			  $species, $trap_species{$trap_ref}{$species}{term_source_ref}, $trap_species{$trap_ref}{$species}{term_accession_number}
+			 ];
       }
 
+      push @a_collection, [
+			   $sample_name,
+			   $a_collection_assay_name,
+			   @{ $trap_collection_rowdata{$trap_ref}{$a_collection_assay_name} }
+			  ];
     }
   }
 }
-
-
 
 
 write_table("$outdir/s_samples.txt", \@s_samples);
