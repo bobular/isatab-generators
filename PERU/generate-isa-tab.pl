@@ -143,10 +143,10 @@ foreach my $filename (glob "$indir/*.{txt,tsv}") {
       return ('Cow', 'VBsp', '0001925');
     }
     when (/^Pig$/) {
-      return ('Pig', 'VBsp', '0000184');
+      return ('Pig', 'VBsp', '0004055');
     }
     when (/^Dog$/) {
-      return ('Dog', 'VBsp', '0000645');
+      return ('Dog', 'VBsp', '0004054');
     }
     when (/^Goat$/) {
       return ('Goat', 'VBsp', '0001547');
