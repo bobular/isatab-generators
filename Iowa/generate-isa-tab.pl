@@ -391,16 +391,15 @@ foreach my $trap_ref (keys %trap_collection_species) {
 			0,0,0  # Sample size and m / f counts
 		       ];
 
-      my $s = 1;
-      foreach my $species (@missing_species) {
-	push @a_species, [
-			  $sample_name,
-			  "$sample_name.SPECIES.".$s++,
-			  'Species assertion by absence from collection',
-			  'SPECIES',
-			  $species, $trap_species{$trap_ref}{$species}{term_source_ref}, $trap_species{$trap_ref}{$species}{term_accession_number}
-			 ];
-      }
+      push @a_species, [
+			$sample_name,
+			"$sample_name.SPECIES",
+			'Species asserted as absent from collection',
+			'SPECIES',
+			join(";", @missing_species),
+			join(";", map { $trap_species{$trap_ref}{$_}{term_source_ref} } @missing_species),
+			join(";", map { $trap_species{$trap_ref}{$_}{term_accession_number} } @missing_species),
+		       ];
 
       push @a_collection, [
 			   $sample_name,
