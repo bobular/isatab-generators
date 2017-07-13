@@ -6,3 +6,4 @@ An. gambiae s.l.	Anopheles gambiae sensu lato	MIRO	40003480
 An. funestus s.l.	Anopheles funestus sensu lato	MIRO	40003478
 An. funestus	Anopheles funestus	MIRO	40003834
 An. coustani	Anopheles coustani	MIRO	40000064
+Anopheles	genus Anopheles	VBsp	0000015

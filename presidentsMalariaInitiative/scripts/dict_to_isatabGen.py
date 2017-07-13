@@ -35,6 +35,9 @@ import numpy as np
 import pdb
 from copy import copy
 
+import sys
+import re
+
 #############
 # Functions #
 #############
@@ -62,7 +65,7 @@ def filter_assay_rows( assay_data_rowise, assay_string_match ):
     """ remove all data rows (from the original .csv) not pertaining to the desired isa-tab sheet, e.g. some rows belong to a_IR_BA.txt whereas others belong to a_IR_WHO.txt
 
     Args:
-        assay_string_match:     e.g. "WHO test kit_adults"  (from: header_to_datacolumn["Test                                           type"]["raw_dataset_column"])
+        assay_string_match:     e.g. "WHO test kit_adults"  (from: header_to_datacolumn["Test type"]["raw_dataset_column"])
         assay_data_rowise:      e.g. a_IR_WHO ( = a_IR_WHO.T ): e.g. ['PMI.96', 'PMI.IR_WHO.96insecticide', 'IR_WHO', '', '', '', 'lambda-cyhalothrin', 'MIRO', '10000125', '0.05', 'percent', 'UO', '0000187', '0000032', '0000032', 'UO', '0000032', 'Raw Data File']
     Returns:
         similar to assay_data_rowise, but with rows only matching to those relevant to the assay specified in assay_string_match
@@ -74,7 +77,7 @@ def filter_assay_rows( assay_data_rowise, assay_string_match ):
     """
 
     # get all row pertaining to IR_WHO assays
-    assay_specification_column = header_to_datacolumn["Test                                           type"]["raw_dataset_column"]
+    assay_specification_column = header_to_datacolumn["Test type"]["raw_dataset_column"]
 
     # check that the arg and the main global data are the same length
     arg_shape = assay_data_rowise.shape
@@ -112,14 +115,14 @@ check_path_exists_else_make_it("../data/isatab")
 # Read "raw pmi speadsheet" #
 #############################
 
-print "\tReading in raw PMI data spreadhseet (.csv):  ../data/raw/IR Database_PMI Dataset 22122014.csv"
-reader      = csv.reader(open("../data/raw/IR Database_PMI Dataset 22122014.csv","rb"),delimiter=",")
+print "\tReading in raw PMI data spreadhseet (.csv):  ../data/raw/PMI-Sarah-refined-2017-07-13-no-PBO.csv"
+reader      = csv.reader(open("../data/raw/PMI-Sarah-refined-2017-07-13-no-PBO.csv","rb"),delimiter=",")
 x           = list(reader)
 dataset     = np.array(x)
-superheaders= dataset[0]
-headers     = dataset[1]
+# superheaders= dataset[0]
+headers     = dataset[0]
 
-dataset_transposed = list(dataset[2:].T)  # so that columns become stacked as rows
+dataset_transposed = list(dataset[1:].T)  # so that columns become stacked as rows
 
 
 ###############################################
@@ -164,7 +167,7 @@ Diagram illustrating "header_to_datacolumn"'s structure:
 
 List of all keys (key1, key2, etc.) by name:
 
-    ['Resistance code_IR Mapper', 'UPDATED STATUS', 'Resistance status_IRMapper', 'Investigation type', 'Chemical class, if standard dosage', 'Comments', 'GEOREF STATUS', 'End month', 'Start month', 'Recorded average mortality in treatments (%)', 'Total mosquitoes in all test replicates', 'Journal reference', 'Village or Locality UPDATED (Co-ordinates)', 'District Update', 'ORIG SOURCE REF', 'Longitude UTM_Y UPDATE2', 'Test                                           type', 'Country', 'REF#', 'Count', 'Species used in controls', 'Time at which mortality recorded', 'Mechanism status', 'Allelic frequency                   (%)', 'ORIG SOURCE', 'Number of replicates tested', 'Province             1st admin level', 'Insecticide tested', 'Resistance status Susceptible:(>=98%) Moderate:(90-98%) High:(<90%)', 'Calculated  average mortality adjusted for control  (%)', 'ORIG REF#', 'Species tested', 'Remarks (eg. deviations from standard procedures)', 'Recorded average mortality in controls (%)', 'Total mosquitoes in all controls', 'Institute that collected data', 'District 2nd admin level', 'Commune 3rd admin level', 'Latitude UTM_X UPDATE2', 'Number of replicates for control', 'Country code', 'Stage tested (and origin)', 'Year', 'Village or Locality (site) ORIG', 'Data published in a journal?']
+    ['Resistance code_IR Mapper', 'UPDATED STATUS', 'Resistance status_IRMapper', 'Investigation type', 'Chemical class, if standard dosage', 'Comments', 'GEOREF STATUS', 'End month', 'Start month', 'Recorded average mortality in treatments (%)', 'Total mosquitoes in all test replicates', 'Journal reference', 'Village or Locality UPDATED (Co-ordinates)', 'District Update', 'ORIG SOURCE REF', 'Longitude UTM_Y UPDATE2', 'Test  type', 'Country', 'REF#', 'Count', 'Species used in controls', 'Time at which mortality recorded', 'Mechanism status', 'Allelic frequency (%)', 'ORIG SOURCE', 'Number of replicates tested', 'Province             1st admin level', 'Insecticide tested', 'Resistance status Susceptible:(>=98%) Moderate:(90-98%) High:(<90%)', 'Calculated average mortality adjusted for control (%)', 'ORIG REF#', 'Species tested', 'Remarks (eg. deviations from standard procedures)', 'Recorded average mortality in controls (%)', 'Total mosquitoes in all controls', 'Institute that collected data', 'District 2nd admin level', 'Commune 3rd admin level', 'Latitude UTM_X UPDATE2', 'Number of replicates for control', 'Country code', 'Stage tested (and origin)', 'Year', 'Village or Locality (site) ORIG', 'Data published in a journal?']
 
 E.g. Column of data corresponding to key: "Resistance code_IR Mapper": 
 
@@ -248,7 +251,19 @@ print "\t\ts_samples.txt"
 # Each of the following 
 
 # @todo: test s_samples for errors then show Bob
-sample_names                = header_to_datacolumn["ORIG SOURCE REF"]["raw_dataset_column"]
+sample_names                = copy(header_to_datacolumn["ORIG SOURCE REF"]["raw_dataset_column"])
+
+#
+# The second update of data contained missing or non-unique values in "ORIG SOURCE REF" column
+# For any nonconforming data (all in the new set) we will assign a brand new Sample Name
+# like this VBPMI01234
+#
+pmi_pattern = re.compile("^PMI\d+$");
+vbpmi_counter = 1
+for index, sample_name in enumerate(sample_names):
+    if not pmi_pattern.match(sample_name):
+        sample_names[index] = "VBPMI%05d" % vbpmi_counter
+        vbpmi_counter = vbpmi_counter + 1
 
 # 2. Create a source name column    header: "Source Name"
 col_sample_names            = sample_names
@@ -265,7 +280,7 @@ col_description             = np.array([""]*nrows)
 col_comment_origRef         = np.array(header_to_datacolumn["ORIG REF#"]["raw_dataset_column"])
 
 # ...
-col_comment_ref             = np.array(header_to_datacolumn["REF#"]["raw_dataset_column"])
+#col_comment_ref             = np.array(header_to_datacolumn["REF#"]["raw_dataset_column"])
 
 # ...
 col_comment_origSourceRef   = np.array(header_to_datacolumn["ORIG SOURCE REF"]["raw_dataset_column"])
@@ -307,7 +322,7 @@ col_stage_ontoTerm          = np.array(header_to_datacolumn['Stage tested (and o
 col_stage_termSourceRef     = np.array(header_to_datacolumn['Stage tested (and origin)']['mapped_ontology_columns']['termSourceRef'])
 
 # 10. header: 'Term Accession Number'
-col_stage_accn              = np.array(["0000655"]*nrows)
+col_stage_accn              = np.array(header_to_datacolumn['Stage tested (and origin)']['mapped_ontology_columns']['accn'])
 
 # 10. header: 'Characteristics [age (EFO:0000246]'
 col_ageEFO                  = np.array(["2-5"]*nrows)
@@ -351,8 +366,8 @@ col_samples_comment_RemarksegFullstoPdeviationsfromstandardprocedureooM     = np
 s_samples_headers           = np.array([    'Source Name',\
                                             'Sample Name',\
                                             'Description',\
-                                            "Comment [PMI ORIG REF#]",\
-                                            "Comment [PMI SOURCE REF#]",\
+                                            "Comment [ORIG REF#]",\
+                                            "Comment [ORIG SOURCE REF#]",\
                                             'Comment [comment]',\
                                             'Material Type',\
                                             'Term Source Ref',\
@@ -496,6 +511,7 @@ strMonth_to_numMonth = {
     "Oct":"10",
     "Nov":"11",
     "Dec":"12",
+    "":"NR",
     "NR":"NR",
     "Jul, Aug":"07"
 }
@@ -604,7 +620,7 @@ col_collection_district = districts_consolidated
 
 # Characteristics [Collection site province (VBcv:0000700)]
 countries = header_to_datacolumn['Country']['mapped_ontology_columns']['gazTerm']
-provinces = header_to_datacolumn['Province             1st admin level']['raw_dataset_column']
+provinces = header_to_datacolumn['Province 1st admin level']['raw_dataset_column']
 non_provinces = ["Southern, Eastern, Northern, Western"]
 
 # since some provinces are stupidly named "Southern", the following consolidates the Country and Province columns into "Southern Angola". 
@@ -639,7 +655,7 @@ col_collection_comment_Startmonth               = np.array(header_to_datacolumn[
 col_collection_comment_Endmonth                 = np.array(header_to_datacolumn['End month']['raw_dataset_column'])
 
 # Comment [ @@@ ]           @todo: @@inc.:headers_list, inc. to @unite:a_collection
-col_collection_comment_Province1stadminlevel    = np.array(header_to_datacolumn['Province             1st admin level']['raw_dataset_column'])
+col_collection_comment_Province1stadminlevel    = np.array(header_to_datacolumn['Province 1st admin level']['raw_dataset_column'])
 
 # Comment [ @@@ ]           @todo: @@inc.:headers_list, inc. to @unite:a_collection
 col_collection_comment_District2ndadminlevel    = np.array(header_to_datacolumn['District 2nd admin level']['raw_dataset_column'])
@@ -963,7 +979,7 @@ col_IR_WHO_rawDataFile = np.array(['p_IR_WHO.txt']*nrows)
 ## Comment[ * ] columns
 
 # Comment [ @@@ ]           @todo: @@inc.:headers_list, inc. to @unite:a_collection
-col_IR_WHO_comment_TestType                             = np.array(header_to_datacolumn['Test                                           type']['raw_dataset_column'])
+col_IR_WHO_comment_TestType                             = np.array(header_to_datacolumn['Test type']['raw_dataset_column'])
 
 # Comment [ @@@ ]           @todo: @@inc.:headers_list, inc. to @unite:a_collection
 col_IR_WHO_comment_InsecticideTested                    = np.array(header_to_datacolumn['Insecticide tested']['raw_dataset_column'])
@@ -981,7 +997,7 @@ col_IR_WHO_RecordedaveragemortalityinTreatmentsMooPoPooM            = np.array(h
 col_IR_WHO_RecordedaveragemortalityincontrolsMooPoPooM              = np.array(header_to_datacolumn['Recorded average mortality in controls (%)']['raw_dataset_column'])
 
 # Comment [ @@@a ]           @todo: @@inc.:headers_list, inc. to @unite:a_collection
-col_IR_WHO_CalculatedaveragemortalityadjustedforcontrolMooPoPooM    = np.array(header_to_datacolumn['Calculated  average mortality adjusted for control  (%)']['raw_dataset_column'])
+col_IR_WHO_CalculatedaveragemortalityadjustedforcontrolMooPoPooM    = np.array(header_to_datacolumn['Calculated average mortality adjusted for control (%)']['raw_dataset_column'])
 
 # Comment [ @@@a ]           @todo: @@inc.:headers_list, inc. to @unite:a_collection
 col_IR_WHO_Numberofreplicatestested                                 = np.array(header_to_datacolumn['Number of replicates tested']['raw_dataset_column'])
@@ -1020,13 +1036,13 @@ a_IR_WHO_headers = np.array([   'Sample Name',\
                                 'Unit',\
                                 'Term Source Ref',\
                                 'Term Accession Number',\
-                                'Comment[Test                                           type]',\
+                                'Comment[Test type]',\
                                 'Comment[Insecticide tested]',\
                                 'Comment[Time at which mortality recorded]',\
                                 'Comment[Resistance status Susceptible:(>=98%) Moderate:(90-98%) High:(<90%)]',\
                                 'Comment[Recorded average mortality in treatments (%)]',\
                                 'Comment[Recorded average mortality in controls (%)]',\
-                                'Comment[Calculated  average mortality adjusted for control  (%)]',\
+                                'Comment[Calculated average mortality adjusted for control (%)]',\
                                 'Comment[Number of replicates tested]',\
                                 'Comment[Total mosquitoes in all test replicates]',\
                                 'Comment[Chemical class, if standard dosage]',\
@@ -1103,7 +1119,7 @@ col_p_IR_WHO_assay_names = [i.replace("\xe6","ae") for i in col_p_IR_WHO_assay_n
 # Phenotype Name
 # e.g.: Mortality percentage:100, 0.05% deltamethrin
 col_p_IR_WHO_mortalityPercentage    = []
-mortalityPercentages                = header_to_datacolumn['Calculated  average mortality adjusted for control  (%)']["raw_dataset_column"]  # e.g. NR, 0.987, 42.58%
+mortalityPercentages                = header_to_datacolumn['Calculated average mortality adjusted for control (%)']["raw_dataset_column"]  # e.g. NR, 0.987, 42.58%
 mortalityPercentages_no_unit        = []
 
 for i,mortality in enumerate(mortalityPercentages):
@@ -1121,7 +1137,7 @@ for i,mortality in enumerate(mortalityPercentages):
     mortalityPercentages_no_unit.append(mortality_noUnit)
 
 # process allele frequencies (remove percent - leave the NRs for now)
-allele_frequencies = header_to_datacolumn['Allelic frequency                   (%)']["raw_dataset_column"]
+allele_frequencies = header_to_datacolumn['Allelic frequency (%)']["raw_dataset_column"]
 allele_frequencies_nounit = []
 for i,frequency in enumerate(allele_frequencies):
     frequency_nounit = frequency.replace("%","")
@@ -1286,13 +1302,13 @@ a_IR_BA_headers = np.array([    'Sample Name',\
                                 'Unit',\
                                 'Term Source Ref',\
                                 'Term Accession Number',\
-                                'Comment[Test                                           type]',\
+                                'Comment[Test type]',\
                                 'Comment[Insecticide tested]',\
                                 'Comment[Time at which mortality recorded]',\
                                 'Comment[Resistance status Susceptible:(>=98%) Moderate:(90-98%) High:(<90%)]',\
                                 'Comment[Recorded average mortality in treatments (%)]',\
                                 'Comment[Recorded average mortality in controls (%)]',\
-                                'Comment[Calculated  average mortality adjusted for control  (%)]',\
+                                'Comment[Calculated average mortality adjusted for control (%)]',\
                                 'Comment[Number of replicates tested]',\
                                 'Comment[Total mosquitoes in all test replicates]',\
                                 'Comment[Chemical class, if standard dosage]',\
@@ -1436,7 +1452,7 @@ col_KDR_rawDataFile = np.array(["g_KDR_genotypes.txt"]*nrows)
 a_KDR_headers = np.array([ 'Sample Name',\
                            'Assay Name',\
                            'Protocol REF',\
-                           'Comment[Test                                           type]',\
+                           'Comment[Test type]',\
                            'Raw Data File'])
 
 a_KDR_genotyping = np.array([ col_KDR_sample_names,\

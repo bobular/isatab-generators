@@ -19,3 +19,5 @@ Nigeria	Nigeria	GAZ	00000912
 Tanzania, United Republic of	Tanzania	GAZ	00001103
 Burkina Faso	Burkina Faso	GAZ	00000905
 Benin	Benin	GAZ	00000904
+Guinea	Guinea	GAZ	00000909
+Zanzibar	Zanzibar	GAZ	00002835
