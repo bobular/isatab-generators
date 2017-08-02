@@ -822,7 +822,7 @@ col_species_result_value        = np.array(header_to_datacolumn["Species tested"
 
 #Term Source Ref
 # "MIRO"
-col_species_result_termSourceRef= np.array(["MIRO"]*nrows)
+col_species_result_termSourceRef= np.array(header_to_datacolumn["Species tested"]["mapped_ontology_columns"]["source"])
 
 #Term Accession Number
 # "40000165"

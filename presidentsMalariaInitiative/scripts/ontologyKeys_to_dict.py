@@ -102,7 +102,7 @@ for row in species_rows:
     miroTerm = row[1]
     source   = row[2]
     miroId   = row[3]
-    species_to_miroTerm_miroId[species]={'miroTerm':miroTerm,'miroId':miroId}
+    species_to_miroTerm_miroId[species]={'miroTerm':miroTerm,'source':source,'miroId':miroId}
 
 #
 # insecticide tested to: miroTerms, concentrations, etc. 
