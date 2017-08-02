@@ -41,4 +41,4 @@ Bendiocarb	bendiocarb	MIRO	10000006
 Malathion ?	malathion	MIRO	10000065				
 Deltamethrin	deltamethrin	MIRO	10000133				
 Deltamethrin 	deltamethrin	MIRO	10000133				
-Pirimiphos-methyl 1.0% (Actellic 300 CS)	pirimiphos-methyl Actellic 300 CS	IRO	000????	1	percent	UO	0000187
+Pirimiphos-methyl 1.0% (Actellic 300 CS)	pirimiphos-methyl Actellic 300 CS	IRO	0000026	1	percent	UO	0000187
