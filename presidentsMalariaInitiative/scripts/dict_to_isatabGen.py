@@ -914,7 +914,7 @@ col_IR_WHO_insecticide_value            = header_to_datacolumn["Insecticide test
 
 # Term Source Ref
 # e.g. 'MIRO'
-col_IR_WHO_insecticide_termSourceRef    = np.array(["MIRO"]*nrows)
+col_IR_WHO_insecticide_termSourceRef    = header_to_datacolumn["Insecticide tested"]["mapped_ontology_columns"]["ins_source"]
 
 # Term Accession Number
 # e.g. '10000125'
