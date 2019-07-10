@@ -12,12 +12,13 @@ use lib '../../VBPopBio/api/Bio-Chado-VBPopBio/lib';
 use Bio::Chado::VBPopBio::Util::ISATab qw/write_extra_sheets/;
 use Bio::Chado::VBPopBio::Util::Functions qw/ordered_hashref/;
 
-my $datafile = './data/ACT-partner-drug-Surveyor-data-SUBSET.xlsx';
+my $datafile = './data/ACT-partner-drug-Surveyor-data-Vbase.xlsx';
 my $output_dir = './output';
 
 # skip lines with these "mutation" alleles
 my $skip_mt_regexp = qr/CIET|CMNK|CMNT|CMET|SMNT|NFD|YYY|copy number/;
 
+# these are the loci we process
 my @loci = ('pfcrt 76', 'pfmdr1 1246', 'pfmdr1 184', 'pfmdr1 86', 'pfmdr1 1042',  'pfmdr1 1034',  'pfmdr1 184');
 
 # read in the excel spreadsheet
@@ -146,14 +147,12 @@ for (my $i=2; $i<=$maxrow; $i++) {
           study_protocol_type_term_accession_number => '30000044',
           study_protocol_description => "For further details, please see the dataset's original publication (PMID:$pId).",
         },
-        map {
-        { study_protocol_name => geno_protocol($_),
+        { study_protocol_name => 'GENO',
           study_protocol_type => 'genotyping',
           study_protocol_type_term_source_ref => 'EFO',
           study_protocol_type_term_accession_number => '0000750',
-          study_protocol_description => "The samples were genotyped at the $_ locus. For further details, please see the dataset's original publication (PMID:$pId).",
-        }
-         } @loci,
+          study_protocol_description => "For further details, please see the dataset's original publication (PMID:$pId).",
+        },
       ],
 
        samples => $samples{$sId} = ordered_hashref,
@@ -195,10 +194,27 @@ for (my $i=2; $i<=$maxrow; $i++) {
   # now the genotype assay
   my $geno_assay_id = "$sample_id.$locus.geno";
   $geno_assay_id =~ s/\s+/_/g;
-  $genotyping_samples{$sId}{$sample_id}{assays}{$geno_assay_id} //=
-    { protocols => { geno_protocol($locus) => { date => "$sf/$sTo" } },
-      characteristics => { 'sample size (VBcv:0000983)' => { value => $tes },
-                         },
+  my $geno_assay =
+    $genotyping_samples{$sId}{$sample_id}{assays}{$geno_assay_id} //=
+      { protocols => { 'GENO' => { date => "$sf/$sTo" } },
+        characteristics => { 'sample size (VBcv:0000983)' => { value => $tes },
+                           },
+        raw_data_files => { 'g_genotypes.txt' => { } }
+      };
+
+  my $geno_percent = sprintf "%.0f", 100*$pre/$tes;
+  my $genotype_id = "$mt $geno_percent%";
+
+  $geno_assay->{genotypes}{$genotype_id} //=
+    {
+     genotype_name => $genotype_id,
+     type => { value => $mt, term_source_ref => "IRO", term_accession_number => "??????" },
+     description => "$mt mutation frequency: $geno_percent% $pre/$tes",
+     characteristics =>
+     { 'variant frequency (SO:0001763)' => { value => $geno_percent,
+                                             unit =>
+                                             { value => 'percent', term_source_ref => 'UO', term_accession_number => '0000187' } }
+     },
     };
 
   # print join("\t", map { $_ // '' } @row)."\n";
@@ -213,10 +229,3 @@ foreach my $sId (keys %isatabs) {
   write_extra_sheets($writer, $isatab);
 }
 
-
-sub geno_protocol {
-  my ($locus) = @_;
-  my $protocol = "GENO_$locus";
-  $protocol =~ s/\s+/_/g;
-  return $protocol;
-}
