@@ -16,8 +16,9 @@ my $datafile = './data/ACT-partner-drug-Surveyor-data-SUBSET.xlsx';
 my $output_dir = './output';
 
 # skip lines with these "mutation" alleles
-my $skip_mt_regexp = qr/CIET|CMNK|SMNT|copy number/;
+my $skip_mt_regexp = qr/CIET|CMNK|CMNT|CMET|SMNT|NFD|YYY|copy number/;
 
+my @loci = ('pfcrt 76', 'pfmdr1 1246', 'pfmdr1 184', 'pfmdr1 86', 'pfmdr1 1042',  'pfmdr1 1034',  'pfmdr1 184');
 
 # read in the excel spreadsheet
 my $book = Spreadsheet::Read->new($datafile);
@@ -39,7 +40,8 @@ my %seen_sig;
 my %isatabs;  # sId => isatab data structures
 my %samples;  # sId => hashref (shortcut to $isatabs->{sId}{studies}[0]{samples})
 my %species_assay_samples; # same but pointing to $isatabs->{sId}{studies}[0]{study_assays][0]{samples}
-
+my %collection_samples;    # ditto
+my %genotyping_samples;
 
 for (my $i=2; $i<=$maxrow; $i++) {
   my @row = $sheet->row($i);
@@ -52,9 +54,12 @@ for (my $i=2; $i<=$maxrow; $i++) {
 
   # genotype data
   my ($mt, $tes, $pre) = map { $row[$h2c{$_}] } qw/mt tes pre/;
-
   # skip the short haplotype alleles
   next if ($mt =~ $skip_mt_regexp);
+
+  my ($gene, $residue) = $mt =~ /^(\w+).+?(\d+)/;
+  die "ERROR: can't determine locus from '$mt'\n" unless (defined $residue);
+  my $locus = "$gene $residue";
 
   # make a signature so that we don't process duplicate rows ('dru' column makes duplicates, and maybe others do too)
   my $sig = join ':', $sId, $lon, $lat, $sf, $sTo, $mt;
@@ -113,13 +118,43 @@ for (my $i=2; $i<=$maxrow; $i++) {
 
        study_assays =>
        [
-        {
-         study_assay_measurement_type => 'species identification assay',
-         study_assay_file_name => 'a_species.txt',
-         samples => $species_assay_samples{$sId} = ordered_hashref(),
+        { study_assay_measurement_type => 'species identification assay',
+          study_assay_file_name => 'a_species.txt',
+          samples => $species_assay_samples{$sId} = ordered_hashref(),
         },
+        { study_assay_measurement_type => 'field collection',
+          study_assay_file_name => 'a_collection.txt',
+          samples => $collection_samples{$sId} = ordered_hashref(),
+        },
+        { study_assay_measurement_type => 'genotype assay',
+          study_assay_file_name => 'a_genotyping.txt',
+          samples => $genotyping_samples{$sId} = ordered_hashref(),
+        }
        ],
 
+       study_protocols =>
+       [
+        { study_protocol_name => 'SPECIES',
+          study_protocol_type => 'species identification method',
+          study_protocol_type_term_source_ref => 'MIRO',
+          study_protocol_type_term_accession_number => '30000005',
+          study_protocol_description => "For further details, please see the dataset's original publication (PMID:$pId).",
+        },
+        { study_protocol_name => 'COLLECT',
+          study_protocol_type => 'field population catch',
+          study_protocol_type_term_source_ref => 'MIRO',
+          study_protocol_type_term_accession_number => '30000044',
+          study_protocol_description => "For further details, please see the dataset's original publication (PMID:$pId).",
+        },
+        map {
+        { study_protocol_name => geno_protocol($_),
+          study_protocol_type => 'genotyping',
+          study_protocol_type_term_source_ref => 'EFO',
+          study_protocol_type_term_accession_number => '0000750',
+          study_protocol_description => "The samples were genotyped at the $_ locus. For further details, please see the dataset's original publication (PMID:$pId).",
+        }
+         } @loci,
+      ],
 
        samples => $samples{$sId} = ordered_hashref,
       }
@@ -128,9 +163,12 @@ for (my $i=2; $i<=$maxrow; $i++) {
 
 
   # now make a sample id
-
   my $sample_id = sprintf "WWARN-%s-%s-%d-%d", $sId,
     ($sNa ? $sNa : "$lat,$lon"), $sf, $sTo;
+
+  # clean up a bit - hope it doesn't cause any non-uniqueness
+  $sample_id =~ s/\s+//g;
+  $sample_id =~ s/--/-/g;
 
   $samples{$sId}{$sample_id} //=
     {
@@ -139,14 +177,28 @@ for (my $i=2; $i<=$maxrow; $i++) {
      material_type => { value => 'population', term_source_ref => 'OBI', term_accession_number => '0000181' },
     };
 
-  $species_assay_samples{$sId}{$sample_id} //=
-    {
-     assays => { "$sample_id.spid" =>
-                 { protocols => { "SPECIES" => { } },
-                   characteristics => { 'species assay result (VBcv:0000961)' =>
-                                        { value => 'Plasmodium falciparum', term_source_ref => 'VBsp', term_accession_number => '??????' } }
-                 }
-               }
+  # and add the species assay
+  $species_assay_samples{$sId}{$sample_id}{assays}{"$sample_id.spid"} //=
+    { protocols => { "SPECIES" => { } },
+      characteristics => { 'species assay result (VBcv:0000961)' =>
+                           { value => 'Plasmodium falciparum', term_source_ref => 'VBsp', term_accession_number => '??????' } }
+    };
+
+  # now handle the collection.  collection ID is equivalent to sample ID (only one species collected)
+  $collection_samples{$sId}{$sample_id}{assays}{"$sample_id.coll"} //=
+    { protocols => { "COLLECT" => { date => "$sf/$sTo" } },
+      characteristics => { 'Collection site latitude (VBcv:0000817)' => { value => $lat },
+                           'Collection site longitude (VBcv:0000816)' => { value => $lon },
+                         },
+    };
+
+  # now the genotype assay
+  my $geno_assay_id = "$sample_id.$locus.geno";
+  $geno_assay_id =~ s/\s+/_/g;
+  $genotyping_samples{$sId}{$sample_id}{assays}{$geno_assay_id} //=
+    { protocols => { geno_protocol($locus) => { date => "$sf/$sTo" } },
+      characteristics => { 'sample size (VBcv:0000983)' => { value => $tes },
+                         },
     };
 
   # print join("\t", map { $_ // '' } @row)."\n";
@@ -155,9 +207,16 @@ for (my $i=2; $i<=$maxrow; $i++) {
 
 foreach my $sId (keys %isatabs) {
   my $isatab = $isatabs{$sId};
-
   my $output_directory = "$output_dir/WWARN-$sId";
   my $writer = Bio::Parser::ISATab->new(directory=>$output_directory);
   $writer->write($isatab);
   write_extra_sheets($writer, $isatab);
+}
+
+
+sub geno_protocol {
+  my ($locus) = @_;
+  my $protocol = "GENO_$locus";
+  $protocol =~ s/\s+/_/g;
+  return $protocol;
 }

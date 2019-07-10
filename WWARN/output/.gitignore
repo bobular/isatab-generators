@@ -1,1 +1,3 @@
-#
+# ignore all files and subdirectories
+*
+
