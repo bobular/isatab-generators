@@ -19,7 +19,18 @@ my $output_dir = './output';
 my $skip_mt_regexp = qr/CIET|CMNK|CMNT|CMET|SMNT|NFD|YYY|copy number/;
 
 # these are the loci we process
-my @loci = ('pfcrt 76', 'pfmdr1 1246', 'pfmdr1 184', 'pfmdr1 86', 'pfmdr1 1042',  'pfmdr1 1034',  'pfmdr1 184');
+my @loci = ('pfcrt 76', 'pfmdr1 1246', 'pfmdr1 184', 'pfmdr1 86', 'pfmdr1 1042',  'pfmdr1 1034');
+
+# all IRO
+my %allele_accessions =
+(
+'pfcrt K76' => '0000169', 'pfcrt 76T' => '0000170', 'pfcrt 76K/T' => '0000171',
+'pfmdr1 D1246' => '0000175', 'pfmdr1 1246Y' => '0000176', 'pfmdr1 1246D/Y' => '0000177',
+'pfmdr1 Y184' => '0000179', 'pfmdr1 184F' => '0000180', 'pfmdr1 184Y/F' => '0000181',
+'pfmdr1 N86' => '0000183', 'pfmdr1 86Y' => '0000184', 'pfmdr1 86N/Y' => '0000185',
+'pfmdr1 N1042' => '0000187',
+'pfmdr1 S1034' => '0000189',
+);
 
 # read in the excel spreadsheet
 my $book = Spreadsheet::Read->new($datafile);
@@ -62,6 +73,8 @@ for (my $i=2; $i<=$maxrow; $i++) {
   die "ERROR: can't determine locus from '$mt'\n" unless (defined $residue);
   my $locus = "$gene $residue";
 
+  die "no accession for '$mt'\n" unless ($allele_accessions{$mt});
+
   # make a signature so that we don't process duplicate rows ('dru' column makes duplicates, and maybe others do too)
   my $sig = join ':', $sId, $lon, $lat, $sf, $sTo, $mt;
   next if ($seen_sig{$sig}++);
@@ -76,6 +89,7 @@ for (my $i=2; $i<=$maxrow; $i++) {
        study_identifier => "WWARN-$sId",
        study_title => $tit,
        study_description => "Proof of concept data import from WWARN",
+       study_submission_date => $pYear,
        study_public_release_date => $pYear,
        study_file_name => 's_samples.txt',
 
@@ -83,7 +97,7 @@ for (my $i=2; $i<=$maxrow; $i++) {
        [
         { study_tag => 'WWARN',
           study_tag_term_source_ref => 'VBcv',
-          study_tag_term_accession_number => '???????',
+          study_tag_term_accession_number => '0001114',
         },
        ],
 
@@ -180,7 +194,7 @@ for (my $i=2; $i<=$maxrow; $i++) {
   $species_assay_samples{$sId}{$sample_id}{assays}{"$sample_id.spid"} //=
     { protocols => { "SPECIES" => { } },
       characteristics => { 'species assay result (VBcv:0000961)' =>
-                           { value => 'Plasmodium falciparum', term_source_ref => 'VBsp', term_accession_number => '??????' } }
+                           { value => 'Plasmodium falciparum', term_source_ref => 'VBsp', term_accession_number => '0003990' } }
     };
 
   # now handle the collection.  collection ID is equivalent to sample ID (only one species collected)
@@ -208,7 +222,7 @@ for (my $i=2; $i<=$maxrow; $i++) {
   $geno_assay->{genotypes}{$genotype_id} //=
     {
      genotype_name => $genotype_id,
-     type => { value => $mt, term_source_ref => "IRO", term_accession_number => "??????" },
+     type => { value => $mt, term_source_ref => "IRO", term_accession_number => $allele_accessions{$mt} },
      description => "$mt mutation frequency: $geno_percent% $pre/$tes",
      characteristics =>
      { 'variant frequency (SO:0001763)' => { value => $geno_percent,
