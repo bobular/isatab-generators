@@ -169,7 +169,7 @@ for (my $i=2; $i<=$maxrow; $i++) {
         },
       ],
 
-       samples => $samples{$sId} = ordered_hashref,
+       sources => { "WWARN-$sId" => { samples => $samples{$sId} = ordered_hashref } }
       }
      ]
     };
@@ -210,7 +210,7 @@ for (my $i=2; $i<=$maxrow; $i++) {
   $geno_assay_id =~ s/\s+/_/g;
   my $geno_assay =
     $genotyping_samples{$sId}{$sample_id}{assays}{$geno_assay_id} //=
-      { protocols => { 'GENO' => { date => "$sf/$sTo" } },
+      { protocols => { 'GENO' => { } },
         characteristics => { 'sample size (VBcv:0000983)' => { value => $tes },
                            },
         raw_data_files => { 'g_genotypes.txt' => { } }
@@ -223,7 +223,7 @@ for (my $i=2; $i<=$maxrow; $i++) {
     {
      genotype_name => $genotype_id,
      type => { value => $mt, term_source_ref => "IRO", term_accession_number => $allele_accessions{$mt} },
-     description => "$mt mutation frequency: $geno_percent% $pre/$tes",
+     description => "$mt mutation frequency: $geno_percent%",
      characteristics =>
      { 'variant frequency (SO:0001763)' => { value => $geno_percent,
                                              unit =>
