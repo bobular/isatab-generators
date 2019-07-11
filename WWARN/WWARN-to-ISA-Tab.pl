@@ -97,7 +97,7 @@ for (my $i=2; $i<=$maxrow; $i++) {
        [
         { study_tag => 'WWARN',
           study_tag_term_source_ref => 'VBcv',
-          study_tag_term_accession_number => '0001114',
+          study_tag_term_accession_number => '0001154',
         },
        ],
 
